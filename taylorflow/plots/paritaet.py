@@ -19,7 +19,7 @@ _MARKER = ["o", "s", "^", "D", "v", "P", "X", "<", ">"]
 
 def paritaet(gemessen, vorhersagen: dict, stil: PlotStil, groesse: str = "",
              band_prozent: float = 15.0, logarithmisch: bool = False, titel: str = "",
-             gruppen=None):
+             gruppen=None, x_beschriftung: str | None = None, y_beschriftung: str | None = None):
     """
     Parameter
     ---------
@@ -28,6 +28,7 @@ def paritaet(gemessen, vorhersagen: dict, stil: PlotStil, groesse: str = "",
     groesse : Name der Größe für die Achsbeschriftung, z. B. r"$k_La$ [1/s]"
     gruppen : optional Array mit Gruppennamen je Punkt (z. B. Kanal); dann
               werden bei nur einem Modell die Gruppen farblich getrennt
+    x_beschriftung, y_beschriftung : ersetzen die Standard-Achsentitel
     """
     g = np.asarray(gemessen, dtype=float)
     with rc(stil):
@@ -69,8 +70,8 @@ def paritaet(gemessen, vorhersagen: dict, stil: PlotStil, groesse: str = "",
         ax.set_xlim(linie[0], hi)
         ax.set_ylim(linie[0], hi)
         ax.set_aspect("equal", adjustable="box")
-        ax.set_xlabel(f"{groesse} {t('gemessen', stil)}".strip())
-        ax.set_ylabel(f"{groesse} {t('berechnet', stil)}".strip())
+        ax.set_xlabel(x_beschriftung or f"{groesse} {t('gemessen', stil)}".strip())
+        ax.set_ylabel(y_beschriftung or f"{groesse} {t('berechnet', stil)}".strip())
         if stil.titel_anzeigen and titel:
             ax.set_title(titel)
         ax.legend(fontsize=stil.schriftgroesse * 0.8, loc="upper left")
