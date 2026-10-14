@@ -67,8 +67,7 @@ def test_kla_log_mean_fuer_exponentiellen_abfall():
     dC = C_star * np.exp(-k * z / U)
     erg = kla_profile(z, U, np.full(z.size, 2e-3), np.gradient(10.0 - dC, z) * 1e-9,
                       dC, 10.0, 1e-9, C_star, p)
-    # Integration bis zum vorletzten aktiven Punkt (bekannte Eigenheit, siehe docs/07_grenzen.md)
-    assert erg["kLa_log_mean"] == pytest.approx(k, rel=0.02)
+    assert erg["kLa_log_mean"] == pytest.approx(k, rel=1e-3)
 
 
 # --- Literatur und Modellvergleich -------------------------------------------------

@@ -1,0 +1,11 @@
+% Zusätze für das PDF-Handbuch (eingebunden von build_pdf.py)
+\usepackage{float}
+\let\origfigure\figure
+\let\endorigfigure\endfigure
+\renewenvironment{figure}[1][2] {\expandafter\origfigure\expandafter[H]} {\endorigfigure}
+\setkeys{Gin}{width=0.85\linewidth,keepaspectratio}
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,commandchars=\\\{\}}
+\fvset{breaklines=true}
+\setlength{\emergencystretch}{3em}
+\setcounter{secnumdepth}{2}
