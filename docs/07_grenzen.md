@@ -61,8 +61,10 @@
    - Stoffdaten werden mit auf 0,1 K gerundeter Temperatur
      zwischengespeichert.
    - Betriebspunkte mit fast gleicher Temperatur erhalten identische Werte.
-     Die Abweichung ist vernachlässigbar, macht das Ergebnis aber von der
-     Reihenfolge der Auswertung abhängig.
+     Das Ergebnis eines Betriebspunkts hängt damit geringfügig davon ab,
+     welche Punkte vorher gerechnet wurden. Beispiel: Wird ein
+     Betriebspunkt zusätzlich ausgewertet oder ausgeschlossen, ändern sich
+     andere kLa_log_mean-Werte um höchstens etwa 0,002 %.
    - Die Referenzergebnisse gelten für die Auswertung aller Kanäle in
      alphabetischer Reihenfolge.
 10. **3D-Flächen:**

@@ -27,6 +27,7 @@ import config  # noqa: E402
 from taylorflow import ergebnisse, protokoll  # noqa: E402
 from taylorflow import plots as pl  # noqa: E402
 from taylorflow.einlesen import finde_messreihen, lade_ausschluesse  # noqa: E402
+from taylorflow.literatur import LITERATURMODELLE  # noqa: E402
 from taylorflow.parameter import AuswerteParameter  # noqa: E402
 from taylorflow.pipeline import werte_kanal_aus  # noqa: E402
 
@@ -75,6 +76,10 @@ def zeichne(kanaele: list[str]) -> None:
         if wahl.get("heatmaps"):
             versuche("heatmaps", lambda: pl.kennzahlen_heatmaps(profile, bp, stil, titel=kanal))
         for modell in wahl.get("modell_flaechen") or []:
+            geltung = LITERATURMODELLE[modell].geometrie if modell in LITERATURMODELLE else "beide"
+            if geltung != "beide" and not (bp["Geometrie"] == geltung).all():
+                print(f"  modell_{modell}: übersprungen (Modell nur für {geltung}e Kanäle)")
+                continue
             versuche(f"modell_{modell}", lambda m=modell: pl.modell_flaeche(
                 bp, m, stil, titel=kanal, modelldatei=config.MODELL_DATEI))
 
