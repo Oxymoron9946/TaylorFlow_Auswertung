@@ -1,0 +1,162 @@
+{
+  "Glas_rectangular_1000um_600um": {
+    "u_gas": [
+      0.07,
+      0.134,
+      0.198,
+      0.198,
+      0.198,
+      0.263,
+      0.263,
+      0.263
+    ],
+    "u_liq": [
+      0.111,
+      0.167,
+      0.056,
+      0.167,
+      0.25,
+      0.056,
+      0.167,
+      0.25
+    ],
+    "c_calib": [
+      -15.445796738115309,
+      -128.55450154512033,
+      46.89042102167578,
+      5.728415275226624,
+      26.46102113560418,
+      -111.30907797309571,
+      29.859626757742934,
+      -42.48815107938546
+    ],
+    "fallback_model": "Polynomial",
+    "fallback_r2": 0.1707745248626391,
+    "fallback_params": [
+      -1052.8136541527283,
+      -1808.0131408887216,
+      8420.511078275887,
+      200.6232550379444
+    ],
+    "fallback_func_string": "-1.05281365e+03*U_gas + -1.80801314e+03*U_liq + 8.42051108e+03*(U_gas*U_liq) + 2.00623255e+02",
+    "USE": false,
+    "NOTE": "NICHT VERWENDEN im ETL: rechteckiger Kanal wird produktiv ueber Kurimoto (2020) berechnet, dieser c_calib-Eintrag wird bei geometry_type='rectangular' im Dispatcher gar nicht abgerufen. Zusaetzlich ist die Fit-Qualitaet der Polynomial-Kalibrierung sehr schwach (R^2=0.17, Gruppe E). Eintrag bleibt erhalten, um Kalibrier-Historie zu dokumentieren."
+  },
+  "PVC_circular_1000um_600um": {
+    "u_gas": [
+      0.122,
+      0.186,
+      0.186,
+      0.251,
+      0.251
+    ],
+    "u_liq": [
+      0.111,
+      0.056,
+      0.25,
+      0.056,
+      0.25
+    ],
+    "c_calib": [
+      0.31178907552244567,
+      0.4026238066268679,
+      0.33880470738416985,
+      1.334848261913208,
+      0.6028858524976399
+    ],
+    "fallback_model": "Power-Law",
+    "fallback_r2": 0.9097452719969453,
+    "fallback_params": [
+      19.138800642033168,
+      2.9108775979564028,
+      -0.4596422055116022
+    ],
+    "fallback_func_string": "1.91388006e+01 * np.maximum(U_gas, 1e-6)**2.91087760e+00 * np.maximum(U_liq, 1e-6)**-4.59642206e-01",
+    "USE": true
+  },
+  "PVC_circular_1000um_800um": {
+    "u_gas": [
+      0.07,
+      0.134,
+      0.198,
+      0.198,
+      0.198,
+      0.263,
+      0.263,
+      0.263
+    ],
+    "u_liq": [
+      0.111,
+      0.167,
+      0.056,
+      0.167,
+      0.25,
+      0.056,
+      0.167,
+      0.25
+    ],
+    "c_calib": [
+      0.6568373679887692,
+      0.25450658277049015,
+      0.6168201681734061,
+      0.7038057937644816,
+      0.05281038721874806,
+      0.2763748578821992,
+      0.3258898266498188,
+      0.1327972320506777
+    ],
+    "fallback_model": "Polynomial",
+    "fallback_r2": 0.5808875124133557,
+    "fallback_params": [
+      -4.645323420247656,
+      -7.48470294518785,
+      25.266490039111513,
+      1.6602598493930183
+    ],
+    "fallback_func_string": "-4.64532342e+00*U_gas + -7.48470295e+00*U_liq + 2.52664900e+01*(U_gas*U_liq) + 1.66025985e+00",
+    "USE": true
+  },
+  "PVC_circular_1500um_1150um": {
+    "u_gas": [
+      0.07,
+      0.134,
+      0.198,
+      0.198,
+      0.198,
+      0.263,
+      0.263,
+      0.263
+    ],
+    "u_liq": [
+      0.111,
+      0.167,
+      0.056,
+      0.111,
+      0.167,
+      0.056,
+      0.111,
+      0.167
+    ],
+    "c_calib": [
+      15.984232475197999,
+      5.1297367666420755,
+      0.3319998194308184,
+      0.27237408149510023,
+      -7.574865139472499,
+      -1.882698729293726,
+      -2.6488583693642673,
+      -6.621482764441876
+    ],
+    "fallback_model": "Polynomial",
+    "fallback_r2": 0.842821055429192,
+    "fallback_params": [
+      -102.09299421433546,
+      -58.14061090782872,
+      24.44453753210622,
+      26.939032592220265
+    ],
+    "fallback_func_string": "-1.02092994e+02*U_gas + -5.81406109e+01*U_liq + 2.44445375e+01*(U_gas*U_liq) + 2.69390326e+01",
+    "USE": false,
+    "NOTE": "NICHT VERWENDEN im ETL: Rohwerte c_calib zwischen -7.6 und +16 (siehe Gruppe E, AIC/BIC/LOO-CV-Analyse). Vermutlich systematischer Fehler in der Druckkalibrierung (siehe METHODIK 8.5). Ein zukuenftiger Aufruf fuer diesen Kanal sollte auf den Bretherton-Default 0.465 zurueckfallen; der Eintrag bleibt fuer die Historie erhalten."
+  }
+}

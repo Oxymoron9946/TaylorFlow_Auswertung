@@ -1,0 +1,82 @@
+# =============================================================================
+# Ausschlussregeln für Messpunkte und Betriebspunkte
+# =============================================================================
+#
+# Je Kanal gibt es drei Arten von Regeln. Der Kanalname setzt sich aus dem
+# Dateinamen der Messdatei zusammen:
+#     <Material>_<Rund|Eckig>_<D>um_<L>cm_<X>mol<Gas>_<Nadel>um
+# Beispiel: Auswertung_Masse_PVC_R_1000um_72cm_20molCO2_800um.csv
+#        -> PVC_Rund_1000um_72cm_20molCO2_800um
+#
+# 1. messpunkte_entfernen
+#    Entfernt Zeilen der Rohdatei, bevor irgendetwas gerechnet wird.
+#    Felder (alle angegebenen müssen zutreffen):
+#      GasVelocity, LiquidVelocity   [m/s]  -> ganzer Betriebspunkt
+#      CameraPosition                       -> nur eine Kamera
+#      BinCenter_mm                  [mm]   -> ein einzelner Bin (Toleranz 0,1 mm)
+#
+# 2. betriebspunkte_ueberspringen
+#    Der Betriebspunkt wird nicht ausgewertet und erscheint in keiner
+#    Ergebnisdatei. Felder: GasVelocity und/oder LiquidVelocity.
+#    Fehlt eines der Felder, gilt die Regel für alle Werte dieses Felds.
+#
+# 3. kla_ungueltig
+#    Der Betriebspunkt wird ausgewertet, aber kLa_log_mean_1_s wird auf
+#    leer (NaN) gesetzt. In der Ergebnistabelle stehen manual_exclude = True
+#    und der angegebene Grund. Schlüssel ist der Betriebspunkt-Name aus der
+#    Spalte "Config" der Betriebspunkt-Tabelle.
+#
+# Jede Regel sollte einen Grund nennen ("grund"). Nach einer Änderung muss
+# die Auswertung neu laufen.
+# =============================================================================
+
+Glas_Eckig_1000um_72cm_20molCO2_600um:
+  messpunkte_entfernen:
+    - GasVelocity: 0.004
+      LiquidVelocity: 0.056
+      grund: >-
+        U_G an der Auflösungsgrenze des Gas-MFC (Schlupf U_meas/U_TP = 1,77,
+        Liu 2005 erwartet 1,06); C*(z) bricht auf 0 ein.
+  betriebspunkte_ueberspringen:
+    - GasVelocity: 0.07
+      LiquidVelocity: 0.02
+      grund: Starke Abweichung des gemessenen Drucks.
+
+PTFE_Rund_1000um_72cm_20molCO2_600um:
+  betriebspunkte_ueberspringen:
+    - LiquidVelocity: 0.056
+      grund: Alle Betriebspunkte mit u_L = 0,056 m/s unbrauchbar (PTFE).
+
+PVC_Rund_1000um_72cm_20molCO2_600um:
+  kla_ungueltig:
+    Gas_0_186_Liq_0_056: "u_L=0.056 kurze aktive Zone, r2=0.12, logMean 8x Kanal-Median (6.97)"
+    Gas_0_251_Liq_0_056: "u_L=0.056 kurze aktive Zone, r2=0.60, logMean 14x Kanal-Median (12.13)"
+
+PVC_Rund_1000um_72cm_20molCO2_800um:
+  messpunkte_entfernen:
+    - GasVelocity: 0.134
+      LiquidVelocity: 0.25
+      grund: >-
+        Absorption vor dem ersten Messpunkt abgeschlossen (Sättigung > 90 %
+        nach 1-2 mm), aktive Zone liegt vor dem Messfenster.
+    - GasVelocity: 0.198
+      LiquidVelocity: 0.25
+      grund: wie oben
+  kla_ungueltig:
+    Gas_0_07_Liq_0_111: "n_valid=3 (unter 10), logMean=123 unphysikalisch"
+
+PVC_Rund_1500um_72cm_20molCO2_1150um:
+  messpunkte_entfernen:
+    - GasVelocity: 0.198
+      LiquidVelocity: 0.167
+      grund: >-
+        Sättigung nach 12 mm, erster Messpunkt bei 11,2 mm, nur 41 Messpunkte;
+        aktive Zone praktisch vor dem Messfenster.
+    - GasVelocity: 0.134
+      LiquidVelocity: 0.167
+      grund: >-
+        Einlauffenster 0-197 mm fehlt in den Rohdaten, C_bulk bleibt 0;
+        keine Absorptionsinformation in der aktiven Zone.
+  kla_ungueltig:
+    Gas_0_07_Liq_0_056: "u_L=0.056 kurze aktive Zone, r2=0.20, logMean 1.4x Kanal-Median (7.70)"
+    Gas_0_198_Liq_0_056: "u_L=0.056 kurze aktive Zone, r2=0.53, logMean 2.8x Kanal-Median (15.90)"

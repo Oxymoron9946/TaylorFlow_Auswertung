@@ -1,0 +1,8 @@
+# Getestet mit Python 3.12 und diesen Versionen (Oktober 2026).
+numpy>=2.0
+pandas>=2.2
+scipy>=1.13
+matplotlib>=3.9
+pyyaml>=6.0
+thermo>=0.4
+pytest>=8.0

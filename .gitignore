@@ -1,0 +1,15 @@
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.venv/
+venv/
+.vscode/
+.idea/
+.spyproject/
+
+# Ergebnisse werden von auswertung.py erzeugt
+ergebnisse/
+
+# PDF-Handbuch wird mit docs/build_pdf.py erzeugt
+docs/Handbuch.pdf
+docs/_build/
