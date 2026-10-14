@@ -59,7 +59,9 @@ def kla_profile(z, U_fit, L_b_fit, dn_dz, treibende_kraft, C_star_start,
         i_ein, i_aus = idx[0], idx[-1]
         dC_ein = treibende_kraft[i_ein]
         dC_aus = treibende_kraft[i_aus]
-        t_res = np.trapezoid(1.0 / U_fit[i_ein:i_aus], x=z[i_ein:i_aus])
+        # Verweilzeit vom ersten bis einschließlich zum letzten aktiven Punkt
+        # (bis Version 2.x endete die Integration einen Gitterpunkt zu früh).
+        t_res = np.trapezoid(1.0 / U_fit[i_ein:i_aus + 1], x=z[i_ein:i_aus + 1])
         if dC_aus > 0 and dC_ein > dC_aus and t_res > 0:
             kLa_log_mean = (1.0 / t_res) * np.log(dC_ein / dC_aus)
 
