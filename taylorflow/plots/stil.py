@@ -66,7 +66,7 @@ TEXTE = {
     "nspez": (r"$\dot n_{\mathrm{spez}}$ [mol/(s m³)]", r"$\dot n_{\mathrm{spec}}$ [mol/(s m³)]"),
     "messpunkte": ("Messpunkte", "Measured points"),
     "saettigung_aus": ("Sättigung am Austritt [%]", "Saturation at outlet [%]"),
-    "aktive_laenge": ("Aktive Kanallänge [%]", "Active channel length [%]"),
+    "z95": (r"Absorptionslänge $z_{95}/L$ [%]", r"Absorption length $z_{95}/L$ [%]"),
     "beta_ein": (r"Gasanteil am Einlass $\beta = L_B/(L_B+L_S)$ [-]", r"Gas fraction at inlet $\beta = L_B/(L_B+L_S)$ [-]"),
     "schlupf": (r"Schlupf $u_{B,\mathrm{gemessen}}/u_{TP}$ [-]", r"Slip $u_{B,\mathrm{meas}}/u_{TP}$ [-]"),
     "L_b_ein_mm": ("Blasenlänge am Einlass [mm]", "Bubble length at inlet [mm]"),

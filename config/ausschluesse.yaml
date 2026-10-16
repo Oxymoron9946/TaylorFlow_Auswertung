@@ -63,7 +63,7 @@ PVC_Rund_1000um_72cm_20molCO2_800um:
       LiquidVelocity: 0.25
       grund: wie oben
   kla_ungueltig:
-    Gas_0_07_Liq_0_111: "n_valid=3 (unter 10), logMean=123 unphysikalisch"
+    Gas_0_07_Liq_0_111: "kLa_log_mean = 123 1/s unphysikalisch, kaum auswertbare Absorption"
 
 PVC_Rund_1500um_72cm_20molCO2_1150um:
   messpunkte_entfernen:

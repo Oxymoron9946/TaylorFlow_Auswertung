@@ -3,12 +3,8 @@
 Regressionstest: Eine komplette Neuauswertung der mitgelieferten Rohdaten muss
 die eingefrorenen Referenzwerte in tests/referenz/ exakt reproduzieren.
 
-Die Referenz entspricht dem Stand des Forschungspraktikums (ETL 2.2.12,
-Commit 4edd541 des alten Repos), bit-genau geprüft.
-
 Schlägt der Test nach einer beabsichtigten Änderung der Rechnung fehl, wird
-die Referenz neu erzeugt (siehe docs/08_erweitern.md) und die Änderung im
-CHANGELOG begründet.
+die Referenz neu erzeugt (siehe Handbuch, Kapitel „Erweitern“).
 """
 
 from pathlib import Path

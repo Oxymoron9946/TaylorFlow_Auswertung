@@ -2,7 +2,7 @@
 """
 Übersicht eines Kanals: sechs Kennzahlen als Farbkarten über u_G × u_L.
 
-    kLa_log_mean | Sättigung am Austritt | aktive Kanallänge
+    kLa_log_mean | Sättigung am Austritt | Absorptionslänge z95
     β am Einlass | Schlupf u_B/u_TP      | Blasenlänge am Einlass
 
 Die Farbkarten werden zwischen den Messpunkten trianguliert; die Messpunkte
@@ -23,7 +23,8 @@ def kennzahlen(profile: pd.DataFrame, betriebspunkte: pd.DataFrame) -> pd.DataFr
     Kennzahlen je Betriebspunkt für die Übersicht.
 
     saettigung_aus   Sättigung C_L/C* am letzten z [%]
-    aktiv_prozent    Anteil der z-Punkte mit kLa_lokal > 1e-6 [%]
+    z95_prozent      Kanalposition, bis zu der 95 % der insgesamt absorbierten
+                     Stoffmenge aufgenommen sind, bezogen auf die Kanallänge [%]
     beta_ein         L_B / (L_B + L_S) am Einlass [-]
     L_b_ein_mm       gefittete Blasenlänge am Einlass [mm]
     """
@@ -34,17 +35,25 @@ def kennzahlen(profile: pd.DataFrame, betriebspunkte: pd.DataFrame) -> pd.DataFr
             continue
         erste, letzte = g.iloc[0], g.loc[g["Position_z_m"].idxmax()]
         L_b, L_s = erste["L_bubble_fit_m"], erste["L_slug_fit_m"]
-        kla = g["kLa_lokal_1_s"].values
         zeilen.append({
             "u_G": bp["GasVelocity_m_s"], "u_L": bp["LiquidVelocity_m_s"],
             "kla": bp["kLa_log_mean_1_s"] if bp["kLa_log_mean_1_s"] > 0 else np.nan,
             "saettigung_aus": float(letzte["Saturation_percent"]),
-            "aktiv_prozent": np.sum(kla > 1e-6) / len(kla) * 100 if len(kla) else np.nan,
+            "z95_prozent": _z95_prozent(g["Position_z_m"].values, g["Diffused_Gas_mol"].values),
             "beta_ein": L_b / (L_b + L_s) if (L_b + L_s) > 0 else np.nan,
             "schlupf": bp["slip_meas_over_theo"] if bp["slip_meas_over_theo"] > 0 else np.nan,
             "L_b_ein_mm": L_b * 1000.0,
         })
     return pd.DataFrame(zeilen)
+
+
+def _z95_prozent(z, n_absorbiert) -> float:
+    """Position, an der 95 % der am Kanalende absorbierten Stoffmenge erreicht sind [% der Länge]."""
+    ok = np.isfinite(z) & np.isfinite(n_absorbiert)
+    z, n = z[ok], n_absorbiert[ok]
+    if len(z) < 2 or n[-1] <= 0:
+        return np.nan
+    return float(z[np.argmax(n >= 0.95 * n[-1])] / z[-1] * 100.0)
 
 
 def _karte(ax, x, y, z, titel, farbskala, stil, vmin=None, vmax=None):
@@ -80,7 +89,7 @@ def kennzahlen_heatmaps(profile: pd.DataFrame, betriebspunkte: pd.DataFrame, sti
             ("kla", t("kla", stil), "plasma", None, None),
             ("saettigung_aus", t("saettigung_aus", stil), "plasma",
              max(0.0, s_ok.min() - rand) if len(s_ok) else None, s_ok.max() + rand if len(s_ok) else None),
-            ("aktiv_prozent", t("aktive_laenge", stil), "RdYlGn", 0, 100),
+            ("z95_prozent", t("z95", stil), "RdYlGn", 0, 100),
             ("beta_ein", t("beta_ein", stil), "cividis", 0, 1),
             ("schlupf", t("schlupf", stil), "magma", None, None),
             ("L_b_ein_mm", t("L_b_ein_mm", stil), "viridis", None, None),

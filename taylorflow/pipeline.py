@@ -9,10 +9,9 @@ Ablauf je Betriebspunkt (u_G, u_L), Details in docs/06_methodik.md:
 3. Phasenlängen fitten      Blasenlänge (Modell v2 + Offsets), Slug und U linear
 4. Druckprofil              Rückwärtsintegration vom Auslass (Bretherton/Kurimoto)
 5. Stoffbilanz              absorbierte Stoffmenge, C_L, C*, Sättigung
-6. dn/dz                    analytisch aus dem Blasenfit
-7. kLa                      lokal, Log-Mean, Ausreißerfilter, Mindestpunktzahl
-8. Druckkorrektur           Blasenlänge auf Einlassdruck umgerechnet
-9. Literaturmodelle         Vorhersagen aller registrierten Korrelationen
+6. kLa                      aktive Zone, logarithmisches Mittel
+7. Druckkorrektur           Blasenlänge auf Einlassdruck umgerechnet
+8. Literaturmodelle         Vorhersagen aller registrierten Korrelationen
 """
 
 from __future__ import annotations
@@ -27,10 +26,10 @@ import pandas as pd
 from . import protokoll, stoffdaten
 from .druckverlust import druckgradient_einheitszelle, kalibrierter_c
 from .einlesen import Messreihe, betriebspunkt_ueberspringen, lade_messdaten
-from .fits import entferne_einbrueche, fit_blasenlaenge, fit_linear
+from .fits import fit_blasenlaenge, fit_linear
 from .geometrie import blasengeometrie
 from .hydrodynamik import filmdicke, kapillarzahl
-from .kla import kla_profile
+from .kla import aktive_zone, kla_log_mean
 from .literatur import alle_literaturwerte, modelleingaben
 from .parameter import AuswerteParameter
 
@@ -288,66 +287,19 @@ def _stoffbilanz(P, L_s_fit, L_b_fit, blasen, stoff, reihe, p):
             "sat_korr": sat_korr}
 
 
-def _dn_dz(z, P_trocken, blasen, L_b_fit, n_roh, n_korr, fit, stoff, p, kontext):
-    """
-    Ableitung der absorbierten Stoffmenge entlang z.
+def _kla(z, U_fit, bilanz, z_meas, p, ausgabe):
+    """Aktive Zone und kLa_log_mean."""
+    treibende_kraft = bilanz["C_star_korr"] - bilanz["C_L_korr"]
+    aktiv = aktive_zone(treibende_kraft, bilanz["C_star_korr"], p)
+    kla_log = kla_log_mean(z, U_fit, treibende_kraft, aktiv, p)
 
-    Analytisch (Modell v2): dn/dz = −[dP/dz · V_B + P · A_B · dL/dz] / (R T),
-    mit dL/dz = −A/λ · exp(−z/λ) + B. Sonst numerisch (np.gradient).
-    Negative Werte werden auf 0 gesetzt, Einbrüche interpoliert.
-    """
-    info, popt = fit["info"], fit["popt_b"]
-    if info.get("model_version", 0) >= 2 and popt is not None and len(popt) >= 4:
-        _, A, lam, B = popt[0], popt[1], popt[2], popt[3]
-        dL_dz = -(A / lam) * np.exp(-z / lam) + B
-        dV_dL = np.where(L_b_fit > blasen["d_b"], blasen["A_b"], 0.0)
-        dP_dz = np.gradient(P_trocken, z)
-        roh = -((dP_dz * blasen["V_b"] + P_trocken * dV_dL * dL_dz) / (R_GAS * stoff["T"]))
-        korr = np.maximum(roh, 0.0)
-    else:
-        protokoll.warnung(kontext, f"Fit-Modell '{fit['name_b']}' (model_version = "
-                                   f"{info.get('model_version', 0)}) ist nicht v2 - "
-                                   f"falle auf numerische Ableitung zurueck.")
-        roh = np.gradient(n_roh, z)
-        korr = np.maximum(np.gradient(n_korr, z), 0.0)
-    korr = entferne_einbrueche(korr, fenster=p.drop_fenster, schwelle=p.drop_schwelle)
-    return roh, korr
-
-
-def _kla(z, U_fit, L_b_fit, dn_roh, dn_korr, bilanz, z_meas, p, kontext, ausgabe):
-    """kLa lokal (roh und korrigiert), Log-Mean, Ausreißerfilter und Mindestpunktzahl."""
-    roh = kla_profile(z, U_fit, L_b_fit, dn_roh, bilanz["C_star_roh"] - bilanz["C_L_roh"],
-                      bilanz["C_star_roh"][0], bilanz["V_L"], bilanz["C_star_roh"], p)
-    korr = kla_profile(z, U_fit, L_b_fit, dn_korr, bilanz["C_star_korr"] - bilanz["C_L_korr"],
-                       bilanz["C_star_korr"][0], bilanz["V_L"], bilanz["C_star_korr"], p)
-    kla_roh, kla_lok = roh["kLa_lokal"], korr["kLa_lokal"]
-
-    # Einlauf vor dem ersten Messpunkt: kLa = 0 (keine Messinformation)
+    # Einlauf vor dem ersten Messpunkt: keine Messinformation, nicht aktiv
+    aktiv_anzeige = aktiv.copy()
     if len(z_meas) > 0:
-        i0 = np.searchsorted(z, z_meas[0])
-        if i0 > 0:
-            kla_roh[:i0] = 0.0
-            kla_lok[:i0] = 0.0
-
-    # Ausreißer: Modified Z-Score (Iglewicz/Hoaglin 1993), nach unten durch Hard-Cap begrenzt
-    positiv = kla_lok[kla_lok > 0]
-    if positiv.size > 0:
-        med = float(np.nanmedian(positiv))
-        s_rob = 1.4826 * float(np.nanmedian(np.abs(positiv - med)))
-        schwelle_mad = med + p.ausreisser_mad_k * s_rob if s_rob > 0 else np.inf
-        kla_lok = np.where(kla_lok > max(schwelle_mad, p.ausreisser_hard_cap_1_s), np.nan, kla_lok)
-
-    u_rel = korr["u_rel_kLa_lokal"]
-    n_valid = int(np.count_nonzero((kla_lok > 0) & np.isfinite(kla_lok)
-                                   & np.isfinite(u_rel) & (u_rel > 0)))
-    kla_log = korr["kLa_log_mean"]
-    if 0 < n_valid < p.kla_min_valide_punkte:
-        protokoll.warnung(kontext, f"kLa nicht berichtbar: nur {n_valid} valide Punkte "
-                                   f"(< {p.kla_min_valide_punkte}) - kLa_log_mean auf NaN gesetzt")
-        kla_log = np.nan
-    ausgabe(f"    kLa_log_mean = {kla_log:.3f} 1/s (n_valid = {n_valid})")
-    return {"kla_lokal": kla_lok, "kla_roh": kla_roh, "u_rel": u_rel,
-            "kla_log_mean": kla_log, "n_valid": n_valid}
+        aktiv_anzeige[:np.searchsorted(z, z_meas[0])] = False
+    n_aktiv = int(aktiv.sum())
+    ausgabe(f"    kLa_log_mean = {kla_log:.3f} 1/s ({n_aktiv} Punkte in der aktiven Zone)")
+    return {"aktiv": aktiv_anzeige, "kla_log_mean": kla_log}
 
 
 def _druckkorrigierte_blasenlaenge(blasen, bilanz):
@@ -410,9 +362,7 @@ def _werte_betriebspunkt_aus(df, reihe, gas, liq, name, p, regeln, kalibrier_db,
     ausgabe(f"    Druck: Auslass {P_aus:.1f} Pa, Einlass {P[0]:.1f} Pa")
     blasen = _blasen_entlang_z(U_fit, L_b_fit, stoff, reihe, kontext)
     bilanz = _stoffbilanz(P, L_s_fit, L_b_fit, blasen, stoff, reihe, p)
-    dn_roh, dn_korr = _dn_dz(z, bilanz["P_trocken"], blasen, L_b_fit, bilanz["n_roh"],
-                             bilanz["n_korr"], fit, stoff, p, kontext)
-    kla = _kla(z, U_fit, L_b_fit, dn_roh, dn_korr, bilanz, fit["z_meas"], p, kontext, ausgabe)
+    kla = _kla(z, U_fit, bilanz, fit["z_meas"], p, ausgabe)
     L_b_korr = _druckkorrigierte_blasenlaenge(blasen, bilanz)
     D_co2 = stoffdaten.diffusion_co2_wasser(T)
 
@@ -436,15 +386,12 @@ def _werte_betriebspunkt_aus(df, reihe, gas, liq, name, p, regeln, kalibrier_db,
         "GasVelocity_m_s": gas,
         "LiquidVelocity_m_s": liq,
         "kLa_log_mean_1_s": kla["kla_log_mean"],
-        "kLa_start_1_s": float(kla["kla_lokal"][0]) if len(kla["kla_lokal"]) else np.nan,
-        "kLa_end_1_s": float(kla["kla_lokal"][-1]) if len(kla["kla_lokal"]) else np.nan,
         "BubbleLength_mean_m": np.nanmean(L_b_fit),
         "BubbleLength_start_m": float(L_b_fit[0]) if len(L_b_fit) else np.nan,
         "BubbleLength_meas_mean_m": np.nanmean(fit["L_b_meas"]),
         "Velocity_mean_m_s": np.nanmean(U_fit),
         "Velocity_meas_mean_m_s": np.nanmean(fit["U_meas"]),
         "slip_meas_over_theo": schlupf,
-        "kLa_n_valid": kla["n_valid"],
         "fit_n_series": int(info.get("n_series", 0)),
         "fit_offset_o2_mm": float(offsets[0] * 1e3) if offsets is not None and len(offsets) >= 1 else np.nan,
         "fit_offset_o3_mm": float(offsets[1] * 1e3) if offsets is not None and len(offsets) >= 2 else np.nan,
@@ -476,9 +423,7 @@ def _profiltabelle(z, L_b_fit, L_b_korr, L_s_fit, U_fit, P, bilanz, kla, fit, ka
         "C_star_lokal_raw_mol_m3": bilanz["C_star_roh"],
         "Saturation_percent": bilanz["sat_korr"],
         "Saturation_percent_raw": bilanz["sat_roh"],
-        "kLa_lokal_1_s": kla["kla_lokal"],
-        "kLa_lokal_raw_1_s": kla["kla_roh"],
-        "u_rel_kLa": kla["u_rel"],
+        "aktive_zone": kla["aktiv"].astype(int),
     })
     n = len(z)
     off = fit["info"].get("offsets")

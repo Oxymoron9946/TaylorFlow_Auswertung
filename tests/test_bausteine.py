@@ -8,8 +8,9 @@ import pandas as pd
 import pytest
 
 from taylorflow.einlesen import messreihe_aus_dateiname
-from taylorflow.fits import blase_v2, entferne_einbrueche, fit_blasenlaenge
-from taylorflow.kla import kla_profile
+from taylorflow.fits import blase_v2, fit_blasenlaenge
+from taylorflow.kla import aktive_zone, kla_log_mean
+from taylorflow.unsicherheit import relative_unsicherheit
 from taylorflow.literatur import LITERATURMODELLE, modelleingaben, vandu
 from taylorflow.modellvergleich import fit_potenzansatz, statistik
 from taylorflow.parameter import AuswerteParameter
@@ -50,11 +51,6 @@ def test_blasenfit_findet_parameter_wieder():
     np.testing.assert_allclose(popt, wahr, rtol=0.1)
 
 
-def test_einbruch_wird_interpoliert():
-    x = np.array([1.0, 1.0, 0.05, 1.0, 1.0])
-    np.testing.assert_allclose(entferne_einbrueche(x), [1, 1, 1, 1, 1])
-
-
 # --- kLa -------------------------------------------------------------------------
 
 def test_kla_log_mean_fuer_exponentiellen_abfall():
@@ -65,9 +61,25 @@ def test_kla_log_mean_fuer_exponentiellen_abfall():
     k = 2.0
     C_star = np.full(z.size, 10.0)
     dC = C_star * np.exp(-k * z / U)
-    erg = kla_profile(z, U, np.full(z.size, 2e-3), np.gradient(10.0 - dC, z) * 1e-9,
-                      dC, 10.0, 1e-9, C_star, p)
-    assert erg["kLa_log_mean"] == pytest.approx(k, rel=1e-3)
+    aktiv = aktive_zone(dC, C_star, p)
+    assert kla_log_mean(z, U, dC, aktiv, p) == pytest.approx(k, rel=1e-3)
+
+
+def test_aktive_zone_endet_bei_saettigung():
+    """Ist ΔC kleiner als die doppelte Unsicherheit von C*, ist der Punkt nicht aktiv."""
+    p = AuswerteParameter()
+    C_star = np.full(4, 10.0)
+    dC = np.array([5.0, 1.0, 0.5, 0.0])
+    grenze = np.hypot(p.u_rel_h_cp, p.u_rel_p_co2) * 10.0 / p.max_urel_delta_c
+    np.testing.assert_array_equal(aktive_zone(dC, C_star, p), dC >= grenze)
+
+
+def test_unsicherheit_ist_positiv_und_endlich():
+    p = AuswerteParameter()
+    z = np.arange(0, 0.5, 1e-3)
+    dC = 10.0 * np.exp(-z / 0.1)
+    u = relative_unsicherheit(np.full(z.size, 2e-3), dC, np.full(z.size, 10.0), p)
+    assert np.all(np.isfinite(u)) and np.all(u > 0)
 
 
 # --- Literatur und Modellvergleich -------------------------------------------------

@@ -25,7 +25,6 @@ import warnings
 from typing import Callable
 
 import numpy as np
-import pandas as pd
 from scipy.optimize import curve_fit
 
 
@@ -242,20 +241,3 @@ def fit_linear(x, y) -> Callable:
         raise ValueError("Linearer Fit: mindestens 2 Messpunkte nötig.")
     popt, _ = curve_fit(linear, x, y)
     return lambda z, p=popt: linear(z, *p)
-
-
-# =============================================================================
-# Glättung
-# =============================================================================
-
-def entferne_einbrueche(werte: np.ndarray, fenster: int = 3, schwelle: float = 0.8) -> np.ndarray:
-    """
-    Ersetzt Einbrüche durch lineare Interpolation.
-
-    Ein Punkt gilt als Einbruch, wenn er unter (1 − schwelle) · gleitender Median
-    (Fensterbreite ``fenster``) liegt.
-    """
-    s = pd.Series(werte)
-    median = s.rolling(fenster, center=True, min_periods=1).median()
-    s[s < (1.0 - schwelle) * median] = np.nan
-    return s.interpolate(method="linear").bfill().ffill().values

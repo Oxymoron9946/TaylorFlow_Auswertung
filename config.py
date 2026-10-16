@@ -57,24 +57,20 @@ PARAMETER = dict(
     sigma_sem_floor_m=1e-6,
     fit_lambda0_m=0.05,
     offset_bound_anteil=0.2,
-    # Integration und Glättung
+    # Integration
     dz_m=1e-3,
     u_fit_cap_faktor=1.5,
     saettigung_clip=0.999,
-    drop_fenster=3,
-    drop_schwelle=0.8,
-    # Messunsicherheiten
-    k_opt_mm_pro_px=0.0548,
+    # Messunsicherheiten (gehen in die Grenze der aktiven Zone ein)
     u_rel_h_cp=0.03,
     u_rel_p_co2=0.02,
+    # Messunsicherheiten, nur für taylorflow/unsicherheit.py
+    k_opt_mm_pro_px=0.0548,
     u_rel_dn_dt=0.0729,
     pixel_unsicherheit_px=1.41,
     # kLa-Auswertung
     max_urel_delta_c=0.5,
     logmean_min_aktive_punkte=10,
-    kla_min_valide_punkte=10,
-    ausreisser_mad_k=3.5,
-    ausreisser_hard_cap_1_s=20.0,
     # Druckverlust (runde Kanäle ohne Kalibrierung)
     c_bretherton_theorie=0.465,
     # Flüssigkeit (Name für die Bibliothek thermo)
