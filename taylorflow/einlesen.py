@@ -244,6 +244,9 @@ def lade_messdaten(reihe: Messreihe, ausschluesse: dict, p: AuswerteParameter,
             if df[c].dtype == object:
                 df[c] = df[c].astype(str).str.replace(",", ".")
             df[c] = pd.to_numeric(df[c], errors="coerce")
+    # Die Videoauswertung schreibt die Anzahl je Bin nur als GroupCount (gleicher Wert wie numel_*)
+    if "numel_BubbleLength_mm" not in df.columns and "GroupCount" in df.columns:
+        df["numel_BubbleLength_mm"] = pd.to_numeric(df["GroupCount"], errors="coerce")
 
     # --- Manuell ausgeschlossene Messpunkte -----------------------------------
     regeln = (ausschluesse.get(reihe.kanal) or {}).get("messpunkte_entfernen") or []

@@ -163,8 +163,7 @@ def blasenlaengen_fit(profil: pd.DataFrame, kennwerte: pd.Series, stil: PlotStil
         if stil.titel_anzeigen and titel:
             ax.set_title(titel)
         if legende == "unten":
-            ax.legend(loc="upper center", bbox_to_anchor=(0.5, -0.15), ncol=3,
-                      fontsize=stil.schriftgroesse * 0.8, framealpha=0.9)
+            fig.legend(loc="outside lower center", ncol=3, fontsize=stil.schriftgroesse * 0.8, framealpha=0.9)
         elif legende != "aus":
             ort = "best" if legende == "innen" else legende
             if ort not in LEGENDENPOSITIONEN:

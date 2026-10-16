@@ -47,6 +47,23 @@ def test_falsche_messart_wird_gemeldet():
         waehle_messreihen([GLAS], "Druck", ROH)
 
 
+def test_datei_ohne_numel_spalten_wie_videoauswertung(tmp_path):
+    """Dateien der Videoauswertung enthalten GroupCount statt numel_*; das Ergebnis ist dasselbe."""
+    import pandas as pd
+
+    from taylorflow.einlesen import lade_ausschluesse, lade_messdaten, messreihe_aus_dateiname
+    from taylorflow.parameter import AuswerteParameter
+
+    df = pd.read_csv(GLAS, sep=";")
+    ohne = tmp_path / GLAS.name
+    df.drop(columns=[c for c in df.columns if c.startswith("numel_")]).to_csv(ohne, sep=";", index=False)
+    aus = lade_ausschluesse(ROH.parents[1] / "config" / "ausschluesse.yaml")
+    a = lade_messdaten(messreihe_aus_dateiname(GLAS), aus, AuswerteParameter(), ausgabe=lambda *x: None)
+    b = lade_messdaten(messreihe_aus_dateiname(ohne), aus, AuswerteParameter(), ausgabe=lambda *x: None)
+    assert len(a) == len(b)
+    assert (a["numel_BubbleLength_mm"].values == b["numel_BubbleLength_mm"].values).all()
+
+
 def test_fehlende_datei_wird_gemeldet():
     with pytest.raises(FileNotFoundError):
         waehle_messreihen([ROH / "Auswertung_Masse_X_R_1um_1cm_1molCO2_1um.csv"], "Masse", ROH)
