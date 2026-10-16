@@ -13,27 +13,11 @@ import numpy as np
 import pandas as pd
 import pytest
 
-from taylorflow import protokoll
-from taylorflow.einlesen import finde_messreihen, lade_ausschluesse
-from taylorflow.ergebnisse import lade_betriebspunkte, lade_profile, speichere
-from taylorflow.parameter import AuswerteParameter
-from taylorflow.pipeline import werte_kanal_aus
+from taylorflow.ergebnisse import lade_betriebspunkte, lade_profile
 
 WURZEL = Path(__file__).resolve().parents[1]
 REFERENZ = WURZEL / "tests" / "referenz"
 F = dict(sep=";", decimal=",", encoding="utf-8-sig", float_precision="round_trip")
-
-
-@pytest.fixture(scope="module")
-def ergebnisordner(tmp_path_factory):
-    ordner = tmp_path_factory.mktemp("ergebnisse")
-    aus = lade_ausschluesse(WURZEL / "config" / "ausschluesse.yaml")
-    protokoll.starte(ordner / "protokoll.txt")
-    for r in finde_messreihen(WURZEL / "data" / "raw"):
-        e = werte_kanal_aus(r, AuswerteParameter(), aus, WURZEL / "data" / "calibrated_c_database.json",
-                            ausgabe=lambda *a: None)
-        speichere(e, ordner, aus, ausgabe=lambda *a: None)
-    return ordner
 
 
 def _vergleiche(neu: pd.DataFrame, ref: pd.DataFrame):

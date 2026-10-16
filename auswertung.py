@@ -27,8 +27,8 @@ matplotlib.use("Agg")
 import config  # noqa: E402
 from taylorflow import ergebnisse, protokoll  # noqa: E402
 from taylorflow import plots as pl  # noqa: E402
+from taylorflow.plots import optionen  # noqa: E402
 from taylorflow.einlesen import lade_ausschluesse, waehle_messreihen  # noqa: E402
-from taylorflow.literatur import LITERATURMODELLE  # noqa: E402
 from taylorflow.parameter import AuswerteParameter  # noqa: E402
 from taylorflow.pipeline import werte_kanal_aus  # noqa: E402
 
@@ -45,49 +45,35 @@ def rechne(reihen) -> list[str]:
 
 
 def zeichne(kanaele: list[str]) -> None:
-    """Erzeugt die in config.PLOTS gewählten Plots für die angegebenen Kanäle."""
+    """Erzeugt die in config.PLOTS eingeschalteten Plots für die angegebenen Kanäle."""
     stil = pl.PlotStil(**config.STIL)
-    wahl = config.PLOTS
+    # Alle Blöcke vorab prüfen: ein Tippfehler bricht sofort mit einer Meldung ab
+    wahl = {name: optionen.mische(name, block) for name, block in config.PLOTS.items()}
+    wahl = {name: opt for name, opt in wahl.items() if opt["an"]}
     for kanal in kanaele:
         ordner = ergebnisse.kanal_ordner(config.ERGEBNIS_ORDNER, kanal) / "plots"
         bp = ergebnisse.lade_betriebspunkte(config.ERGEBNIS_ORDNER, kanal)
         profile = ergebnisse.lade_profile(config.ERGEBNIS_ORDNER, kanal)
         print(f"\nPlots für {kanal}")
 
-        def versuche(name, erzeuge):
+        def zeichne_plot(name, opt, betriebspunkt=None):
             try:
-                pl.speichere(erzeuge(), ordner, name, stil)
-            except Exception as e:  # ein fehlender Plot soll den Lauf nicht abbrechen
-                print(f"  {name}: nicht erzeugt ({e})")
+                for datei, figur in optionen.erzeuge(name, opt, stil, bp, profile, betriebspunkt,
+                                                     kanal, config.MODELL_DATEI):
+                    try:
+                        pl.speichere(figur(), ordner, datei, stil)
+                    except Exception as e:  # ein fehlender Plot soll den Lauf nicht abbrechen
+                        print(f"  {datei}: nicht erzeugt ({e})")
+            except KeyError as e:
+                print(f"  {name}: {e}")
 
-        if wahl.get("kla_flaeche"):
-            versuche("kla_flaeche", lambda: pl.kla_flaeche(bp, stil, titel=kanal))
-        if wahl.get("nspez_flaeche"):
-            versuche("nspez_flaeche", lambda: pl.nspez_flaeche(bp, stil, titel=kanal))
-        if wahl.get("heatmaps"):
-            versuche("heatmaps", lambda: pl.kennzahlen_heatmaps(profile, bp, stil, titel=kanal))
-        for modell in wahl.get("modell_flaechen") or []:
-            geltung = LITERATURMODELLE[modell].geometrie if modell in LITERATURMODELLE else "beide"
-            if geltung != "beide" and not (bp["Geometrie"] == geltung).all():
-                print(f"  modell_{modell}: übersprungen (Modell nur für {geltung}e Kanäle)")
-                continue
-            versuche(f"modell_{modell}", lambda m=modell: pl.modell_flaeche(
-                bp, m, stil, titel=kanal, modelldatei=config.MODELL_DATEI))
-
-        punkte = config.BETRIEBSPUNKTE or list(bp["Config"])
-        for name in punkte:
-            zeile = bp[bp["Config"] == name]
-            if zeile.empty:
-                print(f"  Betriebspunkt {name} nicht in {kanal}.")
-                continue
-            profil = ergebnisse.profil_eines_betriebspunkts(profile, name)
-            titel = f"{kanal} | {name}"
-            if wahl.get("blasenlaengen_fit"):
-                versuche(f"blasenlaenge_{name}", lambda: pl.blasenlaengen_fit(profil, zeile.iloc[0], stil, titel))
-            if wahl.get("stoffmenge"):
-                versuche(f"stoffmenge_{name}", lambda: pl.stoffmenge(profil, stil, titel))
-            if wahl.get("druckprofil"):
-                versuche(f"druck_{name}", lambda: pl.druckprofil(profil, stil, titel))
+        for name, opt in wahl.items():
+            if name not in optionen.JE_BETRIEBSPUNKT:
+                zeichne_plot(name, opt)
+        for betriebspunkt in config.BETRIEBSPUNKTE or list(bp["Config"]):
+            for name, opt in wahl.items():
+                if name in optionen.JE_BETRIEBSPUNKT:
+                    zeichne_plot(name, opt, betriebspunkt)
         print(f"  gespeichert in {ordner}")
 
 

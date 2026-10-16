@@ -59,7 +59,7 @@ TEXTE = {
     "fit_mit_zwischen": ("Fit mit Offsets (zwischen Kameras)", "Fit with offsets (between cameras)"),
     "L_korr": ("Blasenlänge auf Einlassdruck korrigiert", "Bubble length corrected to inlet pressure"),
     "dn_umol": (r"Absorbierte Stoffmenge je Blase $\Delta n$ [µmol]", r"Absorbed amount per bubble $\Delta n$ [µmol]"),
-    "p_pa": ("Druck $p$ [Pa]", "Pressure $p$ [Pa]"),
+    "p": ("Druck $p$ [{einheit}]", "Pressure $p$ [{einheit}]"),
     "u_G": (r"$u_{G}$ [m/s]", r"$u_{G}$ [m/s]"),
     "u_L": (r"$u_{L}$ [m/s]", r"$u_{L}$ [m/s]"),
     "kla": (r"$k_La_{\mathrm{log}}$ [1/s]", r"$k_La_{\mathrm{log}}$ [1/s]"),
@@ -115,8 +115,8 @@ def formatiere_achsen(ax, stil: PlotStil, achsen: str = "xy") -> None:
         ax.grid(True, linestyle=":", alpha=0.4)
 
 
-def speichere(fig, ordner: Path, name: str, stil: PlotStil) -> list[Path]:
-    """Speichert die Figure in allen Formaten aus ``stil.formate`` und schließt sie."""
+def speichere(fig, ordner: Path, name: str, stil: PlotStil, schliessen: bool = True) -> list[Path]:
+    """Speichert die Figure in allen Formaten aus ``stil.formate`` und schließt sie (``schliessen``)."""
     ordner = Path(ordner)
     ordner.mkdir(parents=True, exist_ok=True)
     pfade = []
@@ -124,7 +124,8 @@ def speichere(fig, ordner: Path, name: str, stil: PlotStil) -> list[Path]:
         pfad = ordner / f"{name}.{fmt}"
         fig.savefig(pfad, dpi=stil.dpi, bbox_inches="tight")
         pfade.append(pfad)
-    plt.close(fig)
+    if schliessen:
+        plt.close(fig)
     return pfade
 
 

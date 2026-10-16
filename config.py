@@ -85,16 +85,78 @@ PARAMETER = dict(
 # =============================================================================
 # 4. Plots von auswertung.py
 # =============================================================================
+# Je Plot ein Block. an=False schaltet den Plot ab. Alle anderen Einträge sind
+# Anpassungen; gelöschte Einträge gelten mit dem hier gezeigten Standardwert.
+# Bilder und Beispiele zu jeder Option: Handbuch, Kapitel 4.
+#
+# Für alle Plots:
+#   titel       "auto" (Kanal bzw. Kanal | Betriebspunkt), eigener Text oder "" (ohne)
+#   groesse_cm  (Breite, Höhe) in cm; None = Wert aus STIL
+# Achsbereiche: (min, max) oder None = automatisch
+# Farben: matplotlib-Namen ("tab:red") oder Hex-Codes ("#3B8B3B")
+# Farbskalen: matplotlib-Namen, z. B. "plasma", "viridis", "coolwarm", "cividis"
 PLOTS = dict(
-    # Je Betriebspunkt
-    blasenlaengen_fit=True,      # Messwerte, Fit mit/ohne Kamera-Offsets, Druckkorrektur
-    stoffmenge=True,             # absorbierte Stoffmenge je Blase Δn(z)
-    druckprofil=True,            # berechneter Druck p(z)
-    # Je Kanal
-    kla_flaeche=True,            # 3D: kLa_log_mean über u_G, u_L
-    nspez_flaeche=True,          # 3D: volumenspezifischer Molenstrom
-    heatmaps=True,               # 2 × 3 Kennzahlen-Übersicht
-    modell_flaechen=["yue_2007"],  # 3D: Modellvorhersagen (Namen siehe docs/05_plots.md)
+    # --- Je Betriebspunkt (Dateien <name>_<Betriebspunkt>.png) ---------------------
+    blasenlaengen_fit=dict(             # Messwerte, Fit mit/ohne Kamera-Offsets, Druckkorrektur
+        an=True, titel="auto", groesse_cm=None,
+        x_bereich_cm=None,              # Reaktorposition z [cm]
+        y_bereich_mm=None,              # Blasenlänge [mm]
+        messwerte=True,                 # Messpunkte je Kamera
+        fit_ohne_offsets=True,          # hellblau gestrichelt
+        fit_mit_offsets=True,           # dunkelblau
+        druckkorrigiert=True,           # grün: Blasenlänge auf Einlassdruck umgerechnet
+        kamerafenster=True,             # graue Bänder mit Kameranummer
+        kennwertkasten=True,            # Kasten mit Offsets, R², χ²_red
+        legende="unten",                # "unten", "innen", "aus" oder z. B. "upper left", "lower right"
+    ),
+    stoffmenge=dict(                    # absorbierte Stoffmenge je Blase Δn(z)
+        an=True, titel="auto", groesse_cm=None,
+        x_bereich_cm=None, y_bereich_umol=None,
+        flaeche=True,                   # Fläche unter der Kurve einfärben
+        farbe="#3B8B3B",
+    ),
+    druckprofil=dict(                   # berechneter Druck p(z)
+        an=True, titel="auto", groesse_cm=None,
+        x_bereich_cm=None, y_bereich=None,
+        einheit="Pa",                   # "Pa", "hPa", "mbar", "kPa" oder "bar"
+        farbe="#0F5FA3",
+    ),
+    # --- Je Kanal -------------------------------------------------------------------
+    kla_flaeche=dict(                   # 3D: kLa_log_mean über u_G, u_L
+        an=True, titel="auto", groesse_cm=None,
+        farbskala="plasma",
+        achsen=None,                    # feste Achsen, z. B. dict(x=(0, 0.3), y=(0, 0.3), z=(0, 1.5))
+        blickwinkel=None,               # (Höhe, Azimut) in Grad; None = Wert aus STIL
+        messpunkte=True, hoehenlinien=True,
+        transparenz=0.85,               # Deckkraft der Fläche, 0 … 1
+    ),
+    nspez_flaeche=dict(                 # 3D: volumenspezifischer Molenstrom ṅ_spez
+        an=True, titel="auto", groesse_cm=None,
+        farbskala="coolwarm", achsen=None, blickwinkel=None,
+        messpunkte=True, hoehenlinien=True, transparenz=0.85,
+    ),
+    modell_flaechen=dict(               # 3D: Vorhersage von Literatur- oder eigenen Modellen
+        an=True, titel="auto", groesse_cm=None,
+        modelle=["yue_2007"],           # je Modell ein Bild; Namen: Handbuch, Kapitel 9
+        farbskala="plasma", achsen=None, blickwinkel=None,
+        messpunkte=True, hoehenlinien=True, transparenz=0.85,
+    ),
+    spalten_flaechen=dict(              # 3D: beliebige Spalten der Betriebspunkt-Tabelle
+        an=False, titel="auto", groesse_cm=None,
+        spalten=[                       # je Eintrag ein Bild flaeche_<spalte>.png
+            dict(spalte="SlugLength_mean_m", beschriftung="Sluglänge $L_S$ [mm]", faktor=1000),
+        ],
+        farbskala="viridis", achsen=None, blickwinkel=None,
+        messpunkte=True, hoehenlinien=True, transparenz=0.85,
+    ),
+    heatmaps=dict(                      # Kennzahlen-Übersicht als Farbkarten
+        an=True, titel="auto", groesse_cm=None,
+        # Felder in Leserichtung, bis drei je Zeile. Möglich: "kla", "saettigung_aus",
+        # "z95", "beta_ein", "schlupf", "L_b_ein" oder eine Spalte der Betriebspunkt-Tabelle
+        felder=["kla", "saettigung_aus", "z95", "beta_ein", "schlupf", "L_b_ein"],
+        farbskalen=None,                # z. B. dict(kla="viridis")
+        beschriftungen=None,            # Überschriften, z. B. dict(n_spez_mol_s_m3="ṅ_spez [mol/(s m³)]")
+    ),
 )
 
 # Betriebspunkte für die Plots je Betriebspunkt.

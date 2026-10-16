@@ -6,6 +6,7 @@
     kla_flaeche      gemessenes kLa_log_mean eines Kanals
     nspez_flaeche    volumenspezifischer Molenstrom ṅ_spez eines Kanals
     modell_flaeche   Vorhersage eines Literatur- oder eigenen Modells
+    spalten_flaeche  beliebige Zahlenspalte der Betriebspunkt-Tabelle
 
 Die Fläche wird kubisch zwischen den Messpunkten interpoliert (linear, wenn
 kubisch nicht möglich ist). Außerhalb der konvexen Hülle der Messpunkte
@@ -16,7 +17,6 @@ from __future__ import annotations
 
 import numpy as np
 import pandas as pd
-from matplotlib import cm
 from scipy.interpolate import griddata
 
 from .stil import BLAU, PlotStil, achsgrenzen, formatiere_achsen, neue_figur, rc, t
@@ -37,9 +37,10 @@ def _interpoliere(x, y, z, gitter=100):
     return X, Y, Z
 
 
-def flaeche_3d(x, y, z, stil: PlotStil, z_beschriftung: str, farbskala=cm.plasma,
+def flaeche_3d(x, y, z, stil: PlotStil, z_beschriftung: str, farbskala="plasma",
                titel: str = "", achsen: dict | None = None,
-               x_beschriftung: str | None = None, y_beschriftung: str | None = None):
+               x_beschriftung: str | None = None, y_beschriftung: str | None = None,
+               messpunkte=True, hoehenlinien=True, transparenz=0.85):
     """
     3D-Fläche mit Messpunkten und Höhenlinien am Boden.
 
@@ -47,8 +48,11 @@ def flaeche_3d(x, y, z, stil: PlotStil, z_beschriftung: str, farbskala=cm.plasma
     ---------
     x, y, z : Punkte (NaN-Werte werden ignoriert, mindestens 3 Punkte)
     z_beschriftung : Beschriftung der Farbskala
+    farbskala : Name einer matplotlib-Farbskala, z. B. "plasma", "viridis", "coolwarm"
     achsen : optional {"x": (min, max), "y": (...), "z": (...)} für feste Achsbereiche
              (z. B. zum direkten Vergleich mehrerer Flächen)
+    messpunkte, hoehenlinien : Messpunkte bzw. Höhenlinien am Boden zeigen
+    transparenz : Deckkraft der Fläche (0 = unsichtbar, 1 = deckend)
     """
     x, y, z = (np.asarray(v, dtype=float) for v in (x, y, z))
     ok = np.isfinite(x) & np.isfinite(y) & np.isfinite(z)
@@ -63,11 +67,13 @@ def flaeche_3d(x, y, z, stil: PlotStil, z_beschriftung: str, farbskala=cm.plasma
 
     with rc(stil):
         fig, ax = neue_figur(stil, stil.groesse_3d_cm, projektion="3d")
-        flaeche = ax.plot_surface(X, Y, Z, cmap=farbskala, edgecolor="none", alpha=0.85,
+        flaeche = ax.plot_surface(X, Y, Z, cmap=farbskala, edgecolor="none", alpha=transparenz,
                                   antialiased=True, vmin=zlim[0], vmax=zlim[1])
-        ax.scatter(x, y, z, color=BLAU, s=18, edgecolors="k", depthshade=True, label=t("messpunkte", stil))
-        ax.contour(X, Y, Z, zdir="z", offset=zlim[0], cmap=farbskala, linewidths=1.2,
-                   vmin=zlim[0], vmax=zlim[1])
+        if messpunkte:
+            ax.scatter(x, y, z, color=BLAU, s=18, edgecolors="k", depthshade=True, label=t("messpunkte", stil))
+        if hoehenlinien:
+            ax.contour(X, Y, Z, zdir="z", offset=zlim[0], cmap=farbskala, linewidths=1.2,
+                       vmin=zlim[0], vmax=zlim[1])
         ax.set_xlim(*xlim)
         ax.set_ylim(*ylim)
         ax.set_zlim(*zlim)
@@ -84,14 +90,36 @@ def flaeche_3d(x, y, z, stil: PlotStil, z_beschriftung: str, farbskala=cm.plasma
     return fig
 
 
-def kla_flaeche(betriebspunkte: pd.DataFrame, stil: PlotStil, titel: str = "", achsen=None):
-    """Gemessenes kLa_log_mean; Betriebspunkte ohne gültigen Wert entfallen."""
+def kla_flaeche(betriebspunkte: pd.DataFrame, stil: PlotStil, titel: str = "", achsen=None,
+                farbskala="plasma", **optionen):
+    """Gemessenes kLa_log_mean; Betriebspunkte ohne gültigen Wert entfallen.
+
+    Weitere Optionen (``messpunkte``, ``hoehenlinien``, ``transparenz``): siehe ``flaeche_3d``.
+    """
     d = betriebspunkte.dropna(subset=["kLa_log_mean_1_s"])
     return flaeche_3d(d["GasVelocity_m_s"], d["LiquidVelocity_m_s"], d["kLa_log_mean_1_s"],
-                      stil, t("kla", stil), cm.plasma, titel, achsen)
+                      stil, t("kla", stil), farbskala, titel, achsen, **optionen)
 
 
-def nspez_flaeche(betriebspunkte: pd.DataFrame, stil: PlotStil, titel: str = "", achsen=None):
+def spalten_flaeche(betriebspunkte: pd.DataFrame, spalte: str, stil: PlotStil, titel: str = "",
+                    beschriftung: str | None = None, faktor: float = 1.0, achsen=None,
+                    farbskala="viridis", **optionen):
+    """
+    Beliebige Zahlenspalte der Betriebspunkt-Tabelle als 3D-Fläche.
+
+    spalte : Spaltenname, z. B. "SlugLength_mean_m"
+    beschriftung : Text an der Farbskala; None = Spaltenname
+    faktor : Umrechnung vor dem Zeichnen, z. B. 1000 für m -> mm
+    """
+    if spalte not in betriebspunkte.columns:
+        raise KeyError(f"Spalte '{spalte}' gibt es nicht. Vorhanden: {list(betriebspunkte.columns)}")
+    d = betriebspunkte.dropna(subset=[spalte])
+    return flaeche_3d(d["GasVelocity_m_s"], d["LiquidVelocity_m_s"], d[spalte].astype(float) * faktor,
+                      stil, beschriftung or spalte, farbskala, titel, achsen, **optionen)
+
+
+def nspez_flaeche(betriebspunkte: pd.DataFrame, stil: PlotStil, titel: str = "", achsen=None,
+                  farbskala="coolwarm", **optionen):
     """
     Volumenspezifischer Molenstrom über den ganzen Kanal:
 
@@ -99,11 +127,11 @@ def nspez_flaeche(betriebspunkte: pd.DataFrame, stil: PlotStil, titel: str = "",
     """
     d = betriebspunkte.dropna(subset=["n_spez_mol_s_m3"])
     return flaeche_3d(d["GasVelocity_m_s"], d["LiquidVelocity_m_s"], d["n_spez_mol_s_m3"],
-                      stil, t("nspez", stil), cm.coolwarm, titel, achsen)
+                      stil, t("nspez", stil), farbskala, titel, achsen, **optionen)
 
 
 def modell_flaeche(betriebspunkte: pd.DataFrame, modell: str, stil: PlotStil, titel: str = "",
-                   achsen=None, modelldatei=None):
+                   achsen=None, modelldatei=None, farbskala="plasma", **optionen):
     """Vorhersage eines Literatur- oder eigenen Modells (Name aus ``modellvergleich.verfuegbare_modelle``)."""
     from ..modellvergleich import modell_titel, vorhersage
     z = vorhersage(betriebspunkte, modell, modelldatei)
@@ -112,4 +140,4 @@ def modell_flaeche(betriebspunkte: pd.DataFrame, modell: str, stil: PlotStil, ti
                          "(Gültigkeit z. B. nur für eckige Kanäle).")
     beschriftung = f"{t('kla', stil)} ({modell_titel(modell, modelldatei)})"
     return flaeche_3d(betriebspunkte["GasVelocity_m_s"], betriebspunkte["LiquidVelocity_m_s"], z,
-                      stil, beschriftung, cm.plasma, titel, achsen)
+                      stil, beschriftung, farbskala, titel, achsen, **optionen)
