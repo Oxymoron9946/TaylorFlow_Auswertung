@@ -1,97 +1,163 @@
 # -*- coding: utf-8 -*-
+"""Baut das PDF-Handbuch aus den Markdown-Kapiteln.
+
+Aufruf (aus dem Projektordner):
+    python docs/build_pdf.py        deutsch:  docs/*.md    -> docs/Handbuch_TaylorFlow.pdf
+    python docs/build_pdf.py en     englisch: docs/en/*.md -> docs/Handbuch_TaylorFlow_en.pdf
+
+Voraussetzungen: pypandoc_binary (pip install pypandoc_binary) und XeLaTeX
+(TeX Live oder MiKTeX).
 """
-Baut docs/Handbuch.pdf aus README.md, den Kapiteln docs/01–11 und dem CHANGELOG.
 
-    python docs/build_pdf.py
-
-Benötigt Pandoc (z. B. pip install pypandoc_binary) und XeLaTeX (TeX Live, MiKTeX).
-"""
-
-from __future__ import annotations
-
+import datetime
+import pathlib
 import re
 import subprocess
 import sys
-from datetime import date
-from pathlib import Path
 
-DOCS = Path(__file__).resolve().parent
-WURZEL = DOCS.parent
-KAPITEL = sorted(DOCS.glob("[0-9][0-9]_*.md"))
+import pypandoc
+
+DOCS = pathlib.Path(__file__).resolve().parent
+PROJEKT = DOCS.parent
+KAPITEL = ['01_installation', '02_messdaten', '03_erste_auswertung', '04_plots', '05_konfiguration',
+           '06_ergebnisse', '07_methodik', '08_grenzen', '09_literaturvergleich',
+           '10_druckkalibrierung', '11_monolith', '12_erweitern']
+
+SPRACHEN = {
+    'de': dict(quelle=DOCS, ziel=DOCS / 'Handbuch_TaylorFlow.pdf', lang='de-DE',
+               titel='TaylorFlow-Auswertung', untertitel='Handbuch', datum='%d.%m.%Y', stand='Stand'),
+    'en': dict(quelle=DOCS / 'en', ziel=DOCS / 'Handbuch_TaylorFlow_en.pdf', lang='en-GB',
+               titel='TaylorFlow Evaluation', untertitel='Manual', datum='%d %B %Y', stand='version'),
+}
+
+KOPF = r"""
+\usepackage{fvextra}
+\DefineVerbatimEnvironment{Highlighting}{Verbatim}{breaklines,breakanywhere,commandchars=\\\{\}}
+\fvset{breaklines,breakanywhere}
+\RecustomVerbatimEnvironment{verbatim}{Verbatim}{breaklines,breakanywhere}
+\usepackage{etoolbox}
+\usepackage{array}
+\setlength{\extrarowheight}{2pt}
+\AtBeginEnvironment{longtable}{\small\renewcommand{\arraystretch}{1.35}}
+\setlength{\emergencystretch}{3em}
+\frenchspacing
+\counterwithout{figure}{chapter}
+\let\originalunderscore\_
+\renewcommand{\_}{\originalunderscore\allowbreak}
+\usepackage{float}
+\let\origfigure\figure
+\let\endorigfigure\endfigure
+\renewenvironment{figure}[1][2]{\expandafter\origfigure\expandafter[H]}{\endorigfigure}
+\setcounter{secnumdepth}{2}
+"""
+
+CODE = re.compile(r'(```.*?```|`[^`\n]*`)', re.S)
+LINK = re.compile(r'(?<!!)\[([^\]]+)\]\((?!https?:)[^)]+\)')   # keine Bilder
+LISTE = re.compile(r'([^\n])\n([ \t]*(?:[-*]|\d+\.)[ \t]+)')
+KOMMENTAR = re.compile(r'<!--.*?-->', re.S)
+BILD = re.compile(r'(!\[[^\]]*\]\()(?:\.\./)?(bilder/[^)]+)\)')   # auch ../bilder aus docs/en
+HANDNUMMER = re.compile(r'(?m)^(#{1,4})[ \t]+\d+(?:\.\d+)*[ \t]+')
 
 
-def pandoc_pfad() -> str:
+def git_stand():
     try:
-        import pypandoc
-        return pypandoc.get_pandoc_path()
-    except Exception:
-        return "pandoc"
+        return subprocess.run(['git', '-C', str(PROJEKT), 'rev-parse', '--short', 'HEAD'],
+                              capture_output=True, text=True, check=True).stdout.strip()
+    except (OSError, subprocess.CalledProcessError):
+        return 'unbekannt'
 
 
-def _ohne_codeblock(text: str, funktion) -> str:
-    """Wendet ``funktion`` nur außerhalb von ```-Codeblöcken an."""
-    teile = re.split(r"(```.*?```)", text, flags=re.S)
-    return "".join(t if t.startswith("```") else funktion(t) for t in teile)
+def spaltenbreiten(text):
+    """Trennzeilen von Pipe-Tabellen an den Zellinhalt anpassen.
+
+    Pandoc-Markdown nimmt die relative Spaltenbreite aus der Anzahl der
+    Striche in der Trennzeile; |---|---| ergäbe gleich breite Spalten.
+    Jede Spalte ist mindestens so breit wie ihr längstes nicht trennbares
+    Wort, lange Textspalten werden begrenzt.
+    """
+    zeilen = text.split('\n')
+    i = 0
+    while i < len(zeilen) - 1:
+        if zeilen[i].startswith('|') and re.fullmatch(r'\|(\s*:?-+:?\s*\|)+\s*', zeilen[i + 1]):
+            j = i + 2
+            while j < len(zeilen) and zeilen[j].startswith('|'):
+                j += 1
+            zellen = [[z.strip() for z in zeile.strip().strip('|').split('|')]
+                      for k, zeile in enumerate(zeilen[i:j]) if k != 1]
+            n = len(zellen[0])
+
+            def wort(z):   # längstes nicht trennbares Stück (Code bricht nur an _ um)
+                return max((len(w) for w in re.split(r'[\s_]+', z.replace('`', ''))), default=0)
+
+            breite = []
+            for s in range(n):
+                spalte = [z[s] if s < len(z) else '' for z in zellen]
+                breite.append(max(8, max(wort(z) for z in spalte) + 3, min(30, max(len(z) for z in spalte))))
+            zeilen[i + 1] = '|' + '|'.join('-' * b for b in breite) + '|'
+            i = j
+        else:
+            i += 1
+    return '\n'.join(zeilen)
 
 
-def bereinige(text: str, art: str = "kapitel") -> str:
-    """art: "kapitel" (Handnummern entfernen, LaTeX nummeriert), "readme" oder "unnummeriert"."""
-    # Querverweise auf andere Markdown-Dateien und Code-Dateien in reinen Text umwandeln
-    text = re.sub(r"\[([^\]]+)\]\((?!http)[^)]*\.md(#[^)]*)?\)", r"\1", text)
-    text = re.sub(r"\[(`?[^\]]+`?)\]\((?!http)[^)]+\.py\)", r"\1", text)
-    if art == "readme":
-        # Inhaltsverzeichnis der README entfällt (PDF hat ein eigenes)
-        text = re.sub(r"## Dokumentation.*?(?=## Ordner)", "", text, flags=re.S)
-        text = text.replace("# TaylorFlow-Auswertung", "# Überblick", 1)
-    if art == "kapitel":
-        text = _ohne_codeblock(text, lambda t: re.sub(r"(?m)^(#{1,4})[ \t]+\d+(?:\.\d+)*[ \t]+", r"\1 ", t))
-    else:
-        text = _ohne_codeblock(text, lambda t: re.sub(r"(?m)^(#{1,4}[ \t]+[^\n]+?)[ \t]*$", r"\1 {-}", t))
-    # Pandoc braucht eine Leerzeile vor Listen, GitHub nicht
-    text = _ohne_codeblock(text, lambda t: re.sub(
-        r"(?m)^((?![ \t]*(?:[-*]|\d+\.)[ \t])[^\n|#][^\n]*)\n(?=[ \t]*(?:-|\d+\.)[ \t])", r"\1\n\n", t))
-    return text
+def bereinige(text):
+    """Markdown so anpassen, dass Pandoc/XeLaTeX es sauber setzt.
+
+    Nur außerhalb von Code: Links auf andere Kapitel auf ihren Text kürzen,
+    Leerzeile vor Listen einfügen (sonst hängt Pandoc die Liste an den
+    Absatz), HTML-Kommentare und handgeschriebene Kapitelnummern entfernen
+    (LaTeX nummeriert selbst). Formeln stehen in $…$ und bleiben erhalten.
+    """
+    code = []
+
+    def merke(treffer):
+        code.append(treffer.group(0))
+        return f'\x00{len(code) - 1}\x00'
+
+    t = CODE.sub(merke, text)
+    t = LINK.sub(r'\1', t)
+    t = LISTE.sub(r'\1\n\n\2', t)
+    t = KOMMENTAR.sub('', t)
+    t = HANDNUMMER.sub(r'\1 ', t)
+    # XeLaTeX läuft in einem temporären Ordner: Bildpfade absolut machen
+    t = BILD.sub(lambda m: m.group(1) + (DOCS / m.group(2)).as_posix() + ')', t)
+    t = re.sub('\x00(\\d+)\x00', lambda m: code[int(m.group(1))], t)
+    return spaltenbreiten(t)
 
 
-def main() -> int:
-    teile = [bereinige((WURZEL / "README.md").read_text(encoding="utf-8"), "readme")]
-    teile += [bereinige(k.read_text(encoding="utf-8")) for k in KAPITEL]
-    teile.append(bereinige((DOCS / "CHANGELOG.md").read_text(encoding="utf-8"), "unnummeriert"))
-    gesamt = "\n\n\\newpage\n\n".join(teile)
-
-    build = DOCS / "_build"
-    build.mkdir(exist_ok=True)
-    quelle = build / "handbuch.md"
-    quelle.write_text(gesamt, encoding="utf-8")
-
-    from taylorflow_version import version
-    befehl = [
-        pandoc_pfad(), str(quelle), "-o", str(DOCS / "Handbuch.pdf"),
-        "--pdf-engine=xelatex", "--toc", "--toc-depth=2", "--number-sections",
-        f"--resource-path={DOCS}",
-        "-V", "documentclass=scrreprt", "-V", "lang=de-DE",
-        "-V", "geometry:margin=2.3cm", "-V", "fontsize=10pt",
-        "-V", "mainfont=Cambria", "-V", "sansfont=Calibri", "-V", "monofont=Consolas",
-        "-V", "mathfont=Cambria Math", "-V", "colorlinks=true", "-V", "linkcolor=black",
-        "-V", "urlcolor=blue", "-V", "toccolor=black",
-        "-M", "title=TaylorFlow-Auswertung",
-        "-M", "subtitle=Handbuch zur Auswertungssoftware",
-        "-M", f"date=Version {version()}, {date.today().strftime('%d.%m.%Y')}",
-        "--top-level-division=chapter", "--shift-heading-level-by=0",
-        "-H", str(DOCS / "handbuch_kopf.tex"),
+def main(sprache='de'):
+    s = SPRACHEN[sprache]
+    markdown = '\n\n'.join(bereinige((s['quelle'] / f'{name}.md').read_text(encoding='utf-8')) for name in KAPITEL)
+    datum = datetime.date.today().strftime(s['datum'])
+    kopf = DOCS / '_kopf.tex'
+    kopf.write_text(KOPF, encoding='utf-8')
+    argumente = [
+        '--pdf-engine=xelatex',
+        '--toc', '--toc-depth=2', '--number-sections',
+        '--top-level-division=chapter',
+        '-V', 'documentclass=scrreprt',
+        '-V', f"lang={s['lang']}",
+        '-V', 'mainfont=DejaVu Serif',
+        '-V', 'sansfont=DejaVu Sans',
+        '-V', 'monofont=DejaVu Sans Mono',
+        '-V', 'fontsize=10pt',
+        '-V', 'geometry:margin=2.2cm',
+        '-V', 'colorlinks=true',
+        '-V', 'linkcolor=black',
+        '-V', 'toccolor=black',
+        '-M', f"title={s['titel']}",
+        '-M', f"subtitle={s['untertitel']}",
+        '-M', f"date={datum} · {s['stand']} {git_stand()}",
+        f'--resource-path={DOCS}',
+        '-H', str(kopf),
     ]
-    print("Baue Handbuch …")
-    erg = subprocess.run(befehl, capture_output=True, text=True, encoding="utf-8", errors="replace")
-    if erg.returncode != 0:
-        print(erg.stderr)
-        return 1
-    warnungen = [z for z in erg.stderr.splitlines() if "Missing character" in z]
-    if warnungen:
-        print(f"{len(warnungen)} fehlende Zeichen, z. B.: {warnungen[:3]}")
-    print(f"Fertig: {DOCS / 'Handbuch.pdf'}")
-    return 0
+    try:
+        pypandoc.convert_text(markdown, 'pdf', format='markdown-yaml_metadata_block-fancy_lists',
+                              outputfile=str(s['ziel']), extra_args=argumente)
+    finally:
+        kopf.unlink(missing_ok=True)
+    print(f"PDF geschrieben: {s['ziel']}")
 
 
-if __name__ == "__main__":
-    sys.path.insert(0, str(DOCS))
-    sys.exit(main())
+if __name__ == '__main__':
+    main(sys.argv[1] if len(sys.argv) > 1 else 'de')

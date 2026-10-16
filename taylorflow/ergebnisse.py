@@ -9,7 +9,7 @@ Je Kanal entsteht ein Ordner ``<Ergebnisordner>/<Kanal>/`` mit
     <Kanal>_meta.json           Programmversion, Zeitpunkt, Quelldatei
 
 Format: Semikolon als Trennzeichen, Dezimalkomma, UTF-8 mit BOM (Excel-tauglich).
-Bedeutung aller Spalten: docs/04_auswertung.md.
+Bedeutung aller Spalten: Handbuch, Kapitel 6.2.
 """
 
 from __future__ import annotations

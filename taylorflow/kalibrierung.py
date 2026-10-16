@@ -3,7 +3,7 @@
 Druckkalibrierung: Bretherton-Faktor c für runde Kanäle.
 
 Status: übernommen aus dem Forschungspraktikum, noch nicht abschließend
-validiert (siehe docs/09_druckkalibrierung.md). Für eckige Kanäle wird nicht
+validiert (siehe Handbuch, Kapitel 10). Für eckige Kanäle wird nicht
 kalibriert, dort gilt Kurimoto (2020) ohne freien Faktor.
 
 Idee (je Betriebspunkt einer Messung ohne Stoffübergang, 0 mol-% CO2):
@@ -135,7 +135,7 @@ def kalibriere(reihe: Messreihe, p: AuswerteParameter, ausschluesse: dict, ausga
 
 
 def waehle_ersatzmodell(erg: Kalibrierung, wahl: str = "auto") -> str | None:
-    """'auto' = größtes R² (Verhalten des Praktikums); sonst der angegebene Name."""
+    """'auto' = größtes R²; sonst der angegebene Name."""
     if not erg.ersatzmodelle:
         return None
     if wahl == "auto":

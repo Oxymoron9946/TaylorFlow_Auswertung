@@ -8,7 +8,7 @@ gesammelt. Mit den Standardwerten entstehen die Referenzergebnisse in
 
 Geändert werden die Werte nicht hier, sondern in ``config.py`` im
 Hauptordner (Abschnitt ``PARAMETER``). Begründung und Herkunft jedes Wertes
-stehen in ``docs/03_konfiguration.md``.
+stehen im Handbuch, Kapitel 5.
 """
 
 from __future__ import annotations

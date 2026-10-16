@@ -222,7 +222,7 @@ def lade_messdaten(reihe: Messreihe, ausschluesse: dict, p: AuswerteParameter,
     Liest eine Messdatei, entfernt ausgeschlossene Messpunkte und wendet den
     automatischen Kamerafilter an (nur Messart „Masse“).
 
-    Kamerafilter (METHODIK §1): Ein Bin ist gültig bei rel. Standardfehler <=
+    Kamerafilter (Handbuch, Kapitel 2.5): Ein Bin ist gültig bei rel. Standardfehler <=
     ``kamerafilter_rel_se_max_prozent``, mindestens ``kamerafilter_n_min``
     Blasen und Variationskoeffizient <= ``kamerafilter_cv_max_prozent``. Eine
     Kamera eines Betriebspunkts bleibt nur, wenn mindestens

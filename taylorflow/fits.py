@@ -2,7 +2,7 @@
 """
 Kurvenanpassung der gemessenen Blasenlänge, Sluglänge und Blasengeschwindigkeit.
 
-Blasenlänge (Modell v2, METHODIK §3):
+Blasenlänge (Modell v2, Handbuch Kapitel 7.2):
 
     L(z) = L0 − A · (1 − exp(−z/λ)) + B · z    (+ Offset o_j je Kamera j >= 2)
 
@@ -115,7 +115,7 @@ def _max_korrelation(pcov) -> float | None:
 # =============================================================================
 
 def _bounds_v2(x, y, L_reaktor):
-    """Datengeleitete Grenzen für L0, A, λ, B (METHODIK §3.2)."""
+    """Datengeleitete Grenzen für L0, A, λ, B (Handbuch, Kapitel 7.2)."""
     y_max = float(np.max(y))
     y_min = float(np.min(y))
     y_span = max(y_max - y_min, 1e-9)

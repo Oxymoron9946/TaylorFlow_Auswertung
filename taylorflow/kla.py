@@ -1,6 +1,6 @@
 # -*- coding: utf-8 -*-
 """
-Volumetrischer Stoffübergangskoeffizient kLa (Methodik, Kapitel 7.6 und 7.7).
+Volumetrischer Stoffübergangskoeffizient kLa (Handbuch, Kapitel 7.6).
 
     kLa_log = ln(ΔC_ein / ΔC_aus) / t_res         [Kashid2011]
 

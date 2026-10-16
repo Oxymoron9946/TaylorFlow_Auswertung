@@ -40,6 +40,8 @@ def paritaet(gemessen, vorhersagen: dict, stil: PlotStil, groesse: str = "",
             gruppen = np.asarray(gruppen)
             for k, gr in enumerate(dict.fromkeys(gruppen)):
                 sel = gruppen == gr
+                if not (np.isfinite(g[sel]) & np.isfinite(b[sel])).any():
+                    continue  # Modell gilt für diese Gruppe nicht (z. B. nur eckige Kanäle)
                 ax.scatter(g[sel], b[sel], s=28, marker=_MARKER[k % len(_MARKER)],
                            color=KAMERA_FARBEN[k % len(KAMERA_FARBEN)], edgecolor="k", linewidth=0.4,
                            label=str(gr), zorder=5)

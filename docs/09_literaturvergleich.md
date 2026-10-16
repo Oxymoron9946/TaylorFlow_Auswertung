@@ -1,25 +1,40 @@
-# 8 Literaturvergleich und eigene Modelle
+# 9 Literaturvergleich und eigene Modelle
 
 `python literaturvergleich.py` vergleicht eine gemessene Kenngröße mit
-Modellen und passt auf Wunsch ein eigenes Modell an.
+Literaturmodellen und passt auf Wunsch ein eigenes Modell an.
 
-## 8.1 Ablauf
+## 9.1 Ablauf
 
-1. `auswertung.py` muss vorher gelaufen sein.
-2. In `config.py`, Abschnitt `VERGLEICH`, Folgendes festlegen:
-   - welche Kanäle
-   - welche Zielgröße (Standard `kLa_log_mean_1_s`)
-   - welche Modelle
+1. `auswertung.py` muss für die gewünschten Kanäle gelaufen sein.
+2. In `config.py`, Abschnitt `VERGLEICH`, festlegen:
+
+   | Eintrag | Standard | Bedeutung |
+   |---|---|---|
+   | `kanaele` | `None` | `None` = alle Kanäle mit Ergebnissen; sonst Liste von Kanalnamen |
+   | `zielgroesse` | `"kLa_log_mean_1_s"` | beliebige Zahlenspalte der Betriebspunkt-Tabelle |
+   | `groesse_beschriftung` | `r"$k_La_{\mathrm{log}}$ [1/s]"` | Achsenbeschriftung der Zielgröße |
+   | `modelle` | alle Literaturmodelle | Liste der Modelle für Tabelle und Paritätsdiagramme |
+   | `band_prozent` | 15 | Breite des Bands ± um die Diagonale [%] |
+   | `logarithmisch` | `True` | logarithmische Achsen |
+   | `eigener_fit` | Block | eigenes Modell anpassen (9.3); `None` = kein Fit |
+
 3. Ausführen. Ausgaben in `ergebnisse/vergleich/`:
    - `vergleich_<Zielgröße>.csv`: Statistik je Modell, sortiert nach MAPE
    - `paritaet_<Modell>.png`: Paritätsdiagramm je Modell, Kanäle farbig
    - `eigenes_modell_<Name>.png`: Parität des angepassten eigenen Modells
 
-![Parität Liu und Wang 2011, runde Kanäle](bilder/paritaet.png)
+![Paritätsdiagramm Yue 2007 für den Glaskanal](bilder/paritaet.png){width=65%}
+
+**Paritätsdiagramm:** gemessene gegen berechnete Werte, Kanäle mit eigener
+Farbe und Form. Die gestrichelte Diagonale ist die perfekte Übereinstimmung,
+die gepunkteten Linien begrenzen die Abweichung ±`band_prozent`. Der Titel
+nennt den MAPE. Kanäle, für die das Modell nicht gilt (hier die runden
+Kanäle bei Yue 2007), fehlen. Größe und Sprache folgen `STIL`
+(`groesse_paritaet_cm`, `sprache`, Kapitel 4.10).
 
 Betriebspunkte mit `manual_exclude = True` werden nicht verwendet.
 
-**Statistik:**
+**Statistik in `vergleich_<Zielgröße>.csv`:**
 
 | Spalte | Bedeutung |
 |---|---|
@@ -29,7 +44,7 @@ Betriebspunkte mit `manual_exclude = True` werden nicht verwendet.
 | `RMSE` | Wurzel der mittleren quadratischen Abweichung (Einheit der Zielgröße) |
 | `im_Band_%` | Anteil der Punkte innerhalb ±`band_prozent` |
 
-## 8.2 Literaturmodelle
+## 9.2 Literaturmodelle
 
 Alle Modelle stehen in `taylorflow/literatur.py` mit Formel und
 Originalbereich. Ihre Vorhersagen sind außerdem als Spalten
@@ -48,20 +63,21 @@ Originalbereich. Ihre Vorhersagen sind außerdem als Spalten
 | `yue_2009` | Yue et al. 2009 | eckig | (2/d) √(D u_B/d) (L_B/L_UC)^0,3 | d 0,2–0,4 mm |
 
 **Eingangsgrößen:**
-- Gemittelte gefittete Blasengeschwindigkeit u_B, Blasen- und Sluglänge
-  sowie d und D(T) des Betriebspunkts.
-- Yue 2007 nutzt die Leerrohrgeschwindigkeiten.
-- Stoffwerte für Ca, Re und Sc sind fest (Wasser/CO2, ca. 25 °C).
 
-Die Kanäle des Praktikums liegen bei fast allen Modellen außerhalb des
-Originalbereichs (größere Kanäle, längere Einheitszellen). Die Abweichungen
-sind entsprechend groß. Im Praktikum lag nur Yue 2007 für den Glaskanal im
-Trend (Steigung im log-log-Plot 0,92, R² = 0,92), mit rund 70 %
-systematischer Überschätzung.
+- gemittelte gefittete Blasengeschwindigkeit u_B, Blasen- und Sluglänge
+  sowie d und D(T) des Betriebspunkts
+- Yue 2007 nutzt die Leerrohrgeschwindigkeiten
+- Stoffwerte für Ca, Re und Sc sind fest (Wasser/CO2, ca. 25 °C)
 
-## 8.3 Eigenes Modell anpassen
+Die mitgelieferten Kanäle liegen bei fast allen Modellen außerhalb des
+Originalbereichs (größere Kanäle, längere Einheitszellen); die Abweichungen
+sind entsprechend groß. Nur Yue 2007 folgt im Glaskanal dem Trend
+(Steigung im log-log-Diagramm 0,92, R² = 0,92), mit rund 70 % systematischer
+Überschätzung.
 
-Der Abschnitt `eigener_fit` in `config.VERGLEICH` passt einen Potenzansatz an:
+## 9.3 Eigenes Modell anpassen
+
+Der Block `eigener_fit` in `config.VERGLEICH` passt einen Potenzansatz an:
 
 $$y = a \cdot x_1^{b_1} \cdot x_2^{b_2} \cdots$$
 
@@ -87,13 +103,15 @@ VERGLEICH = dict(
 )
 ```
 
+![Potenzansatz in u_G und u_L, angepasst an alle Kanäle](bilder/eigenes_modell.png){width=65%}
+
 Mit `speichern=True` wird das Modell in `config/eigene_modelle.yaml`
-abgelegt. Gleichnamige Einträge werden überschrieben. Danach steht es unter
-seinem Namen überall zur Verfügung wie ein Literaturmodell:
+abgelegt; ein gleichnamiger Eintrag wird überschrieben. Danach steht es
+unter seinem Namen überall wie ein Literaturmodell zur Verfügung:
 
 - in `VERGLEICH["modelle"]`
-- in `PLOTS["modell_flaechen"]` (3D-Fläche)
-- in `MONOLITH["vergleich_modell"]`
+- im Plot `modell_flaechen` (Kapitel 4.7)
+- in `MONOLITH["vergleich_modell"]` (Kapitel 11)
 
 Aufbau eines gespeicherten Eintrags (Zahlenwerte nur zur Veranschaulichung):
 
@@ -115,13 +133,17 @@ pvc_kla:
 Die Datei darf auch von Hand bearbeitet werden, z. B. um eine
 Literaturkorrelation in Potenzform mit eigenen Koeffizienten einzutragen.
 
-## 8.4 Aus Python
+**Andere Zielgrößen:** Jede Zahlenspalte ist möglich, z. B. `n_spez_mol_s_m3`
+oder `slip_meas_over_theo`. Die Literaturmodelle beziehen sich alle auf kLa;
+für andere Größen sind nur eigene Modelle sinnvoll.
+
+## 9.4 Aus Python
 
 ```python
 import config
 from taylorflow import plots
 from taylorflow.modellvergleich import (lade_betriebspunkte_mehrerer_kanaele, fit_potenzansatz,
-                                        speichere_modell, vergleichstabelle, vorhersage)
+                                        vergleichstabelle, vorhersage)
 
 daten = lade_betriebspunkte_mehrerer_kanaele(config.ERGEBNIS_ORDNER)
 glas = daten[daten["Kanal"].str.startswith("Glas")]
@@ -134,24 +156,18 @@ print(m.formel(), m.mape_prozent)
 print(vergleichstabelle(glas, "kLa_log_mean_1_s", ["yue_2007", "vandu"]))
 
 fig = plots.paritaet(glas["kLa_log_mean_1_s"], {"Yue 2007": vorhersage(glas, "yue_2007")},
-                     plots.PlotStil(), r"$k_La$ [1/s]")
+                     plots.PlotStil(), r"$k_La$ [1/s]", band_prozent=30, logarithmisch=True)
+plots.speichere(fig, "abbildungen", "paritaet_yue", plots.PlotStil())
 ```
 
 Ein Modell, das abgeleitete Spalten wie hier `L_UC_m` nutzt, braucht diese
 Spalte auch beim späteren Aufruf. Für die dauerhafte Nutzung über `config.py`
 sind daher die vorhandenen Spalten der Betriebspunkt-Tabelle vorzuziehen.
 
-**Andere Zielgrößen:** Jede Zahlenspalte ist möglich, z. B. `n_spez_mol_s_m3`
-oder `slip_meas_over_theo`. Die Literaturmodelle beziehen sich alle auf kLa;
-für andere Größen sind nur eigene Modelle sinnvoll.
-
-## 8.5 Neues Literaturmodell als Formel ergänzen
+## 9.5 Neues Literaturmodell als Formel ergänzen
 
 Für Modelle, die kein Potenzansatz sind, wird in `taylorflow/literatur.py`
-eine Funktion geschrieben und in `LITERATURMODELLE` eingetragen (Muster:
-`vandu`). Danach erscheint das Modell automatisch:
-
-- als Spalte in den Betriebspunkt-Tabellen (nach erneuter Auswertung)
-- im Vergleich und als Fläche
-
-Siehe [Kapitel 11](11_erweitern.md).
+eine Funktion geschrieben und in `LITERATURMODELLE` eingetragen (Kapitel
+12.3). Danach erscheint das Modell automatisch als Spalte in den
+Betriebspunkt-Tabellen (nach erneuter Auswertung), im Vergleich und als
+Fläche.

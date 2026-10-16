@@ -2,7 +2,7 @@
 """
 Auswertung einer Messreihe (ein Kanal) Betriebspunkt für Betriebspunkt.
 
-Ablauf je Betriebspunkt (u_G, u_L), Details in docs/06_methodik.md:
+Ablauf je Betriebspunkt (u_G, u_L), Details im Handbuch, Kapitel 7:
 
 1. Messpunkte vorbereiten   Duplikate je Kamera und Bin entfernen, Kamera-Index
 2. Stoffdaten               T, p am Auslass; Flüssigkeitsdaten, Henry, Dampfdruck

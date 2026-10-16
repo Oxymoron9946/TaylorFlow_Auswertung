@@ -10,7 +10,7 @@ Die Skripte im Hauptordner lesen sie beim Start:
     python monolith.py            Monolith-Auswertung und Vergleich mit einem Kanal
     python kalibrierung.py        Druckkalibrierung (Bretherton-Faktor c)
 
-Bedeutung jedes Eintrags: docs/03_konfiguration.md
+Bedeutung jedes Eintrags: Handbuch, Kapitel 4 (Plots) und 5 (übrige Einträge)
 """
 
 from pathlib import Path
@@ -47,7 +47,7 @@ NEU_RECHNEN = True
 # 3. Auswerte-Parameter
 # =============================================================================
 # Standardwerte = Stand des Forschungspraktikums. Erläuterung, Herkunft und
-# Sensitivität jedes Werts: docs/03_konfiguration.md, Abschnitt 3.
+# Wirkung jedes Werts: Handbuch, Kapitel 5.3.
 PARAMETER = dict(
     # Automatischer Kamerafilter
     kamerafilter_rel_se_max_prozent=5.0,
@@ -137,7 +137,7 @@ PLOTS = dict(
     ),
     modell_flaechen=dict(               # 3D: Vorhersage von Literatur- oder eigenen Modellen
         an=True, titel="auto", groesse_cm=None,
-        modelle=["yue_2007"],           # je Modell ein Bild; Namen: Handbuch, Kapitel 9
+        modelle=["yue_2007"],           # je Modell ein Bild; Namen: Handbuch, Kapitel 4.7
         farbskala="plasma", achsen=None, blickwinkel=None,
         messpunkte=True, hoehenlinien=True, transparenz=0.85,
     ),
