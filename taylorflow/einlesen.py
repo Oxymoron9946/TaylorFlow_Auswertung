@@ -112,6 +112,68 @@ def finde_messreihen(ordner: Path, messart: str = "Masse") -> list[Messreihe]:
     return [messreihe_aus_dateiname(p) for p in sorted(Path(ordner).glob(f"Auswertung_{messart}_*.csv"))]
 
 
+def _dateidialog(messart: str, startordner: Path) -> list[Path]:
+    """Fenster zur Auswahl einer oder mehrerer Messdateien (Abbruch: leere Liste)."""
+    import tkinter as tk
+    from tkinter import filedialog
+
+    fenster = tk.Tk()
+    fenster.withdraw()
+    fenster.attributes("-topmost", True)
+    try:
+        dateien = filedialog.askopenfilenames(
+            parent=fenster,
+            title=f"Messdateien auswählen (Auswertung_{messart}_….csv, mehrere mit Strg)",
+            initialdir=str(startordner) if Path(startordner).is_dir() else None,
+            filetypes=[(f"Messdateien {messart}", f"Auswertung_{messart}_*.csv"), ("CSV-Dateien", "*.csv")],
+        )
+    finally:
+        fenster.destroy()
+    return [Path(d) for d in dateien]
+
+
+def waehle_messreihen(einstellung, messart: str, rohdaten_ordner: Path,
+                      dialog_ordner: Path | None = None) -> list[Messreihe]:
+    """
+    Messreihen nach der Einstellung ``MESSDATEIEN`` in ``config.py``.
+
+    Parameter
+    ---------
+    einstellung : "dialog" (Auswahlfenster), "alle" (alle Dateien der Messart im
+        Rohdatenordner) oder eine Liste von Dateipfaden
+    messart : "Masse" oder "Druck"
+    dialog_ordner : Ordner, in dem das Auswahlfenster startet
+
+    Rückgabe
+    --------
+    Liste der Messreihen; leer, wenn im Auswahlfenster abgebrochen wurde.
+    """
+    if isinstance(einstellung, str) and einstellung.lower() == "alle":
+        reihen = finde_messreihen(rohdaten_ordner, messart)
+        if not reihen:
+            raise FileNotFoundError(f"Keine Dateien Auswertung_{messart}_*.csv in {rohdaten_ordner}.")
+        return reihen
+    if isinstance(einstellung, str) and einstellung.lower() == "dialog":
+        dateien = _dateidialog(messart, Path(dialog_ordner or rohdaten_ordner))
+    elif isinstance(einstellung, (str, Path)):
+        dateien = [Path(einstellung)]
+    else:
+        dateien = [Path(d) for d in einstellung]
+
+    fehlend = [str(d) for d in dateien if not d.is_file()]
+    if fehlend:
+        raise FileNotFoundError(f"Messdatei nicht gefunden: {fehlend}")
+    reihen = [messreihe_aus_dateiname(d) for d in dateien]
+    falsch = [r.datei.name for r in reihen if r.messart != messart]
+    if falsch:
+        raise ValueError(f"Hier werden Dateien Auswertung_{messart}_….csv erwartet, gewählt: {falsch}")
+    namen = [r.kanal for r in reihen]
+    doppelt = sorted({n for n in namen if namen.count(n) > 1})
+    if doppelt:
+        raise ValueError(f"Mehrere Dateien mit demselben Kanalnamen gewählt: {doppelt}")
+    return sorted(reihen, key=lambda r: r.datei.name)
+
+
 # =============================================================================
 # Ausschlussregeln
 # =============================================================================

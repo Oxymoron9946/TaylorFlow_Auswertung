@@ -4,14 +4,14 @@ Druckkalibrierung (Bretherton-Faktor c) aus Messungen ohne CO2.
 
     python kalibrierung.py
 
-Einstellungen: config.KALIBRIERUNG. Verwendet die Dateien Auswertung_Druck_*.csv
-im Rohdatenordner. Ohne ``datenbank_schreiben=True`` wird nur gerechnet und
+Einstellungen: config.KALIBRIERUNG. Die Dateien Auswertung_Druck_*.csv werden
+per Auswahlfenster oder als feste Liste angegeben. Ohne ``datenbank_schreiben=True`` wird nur gerechnet und
 angezeigt; die Datenbank bleibt unverändert.
 
 Ergebnisse in <ERGEBNIS_ORDNER>/kalibrierung/:
     <Schlüssel>_c_werte.csv      c je Betriebspunkt
     <Schlüssel>_c_flaeche.png    c über u_G und u_L
-Hintergrund und Einschränkungen: docs/09_druckkalibrierung.md
+Hintergrund und Einschränkungen: Handbuch, Kapitel „Druckkalibrierung“
 """
 
 from __future__ import annotations
@@ -25,7 +25,7 @@ matplotlib.use("Agg")
 
 import config  # noqa: E402
 from taylorflow import plots as pl  # noqa: E402
-from taylorflow.einlesen import finde_messreihen, lade_ausschluesse  # noqa: E402
+from taylorflow.einlesen import lade_ausschluesse, waehle_messreihen  # noqa: E402
 from taylorflow.kalibrierung import kalibriere, schreibe_in_datenbank, waehle_ersatzmodell  # noqa: E402
 from taylorflow.parameter import AuswerteParameter  # noqa: E402
 from matplotlib import cm  # noqa: E402
@@ -40,9 +40,12 @@ def main() -> int:
     ordner = config.ERGEBNIS_ORDNER / "kalibrierung"
     ordner.mkdir(parents=True, exist_ok=True)
 
-    for reihe in finde_messreihen(config.ROHDATEN_ORDNER, "Druck"):
-        if k.get("kanaele") and reihe.kalibrier_key not in k["kanaele"]:
-            continue
+    reihen = waehle_messreihen(k.get("messdateien", "dialog"), "Druck", config.ROHDATEN_ORDNER,
+                               k.get("dialog_ordner"))
+    if not reihen:
+        print("Keine Messdatei ausgewählt, Kalibrierung beendet.")
+        return 1
+    for reihe in reihen:
         print(f"\n=== {reihe.kalibrier_key} ===")
         erg = kalibriere(reihe, p, ausschluesse)
         if erg is None or erg.punkte.empty:

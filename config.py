@@ -20,7 +20,10 @@ HIER = Path(__file__).resolve().parent
 # =============================================================================
 # 1. Ordner und Dateien
 # =============================================================================
-ROHDATEN_ORDNER = HIER / "data" / "raw"            # Auswertung_Masse_*.csv, Auswertung_Druck_*.csv
+ROHDATEN_ORDNER = HIER / "data" / "raw"            # mitgelieferte Messdateien
+# Ordner, in dem das Auswahlfenster startet, z. B. der Ausgabeordner der Videoauswertung:
+# DIALOG_ORDNER = Path(r"C:\Messungen\Videoauswertung\output\Output_MassTransfer")
+DIALOG_ORDNER = ROHDATEN_ORDNER
 ERGEBNIS_ORDNER = HIER / "ergebnisse"              # wird angelegt; ein Unterordner je Kanal
 AUSSCHLUSS_DATEI = HIER / "config" / "ausschluesse.yaml"
 KALIBRIER_DATENBANK = HIER / "data" / "calibrated_c_database.json"
@@ -29,14 +32,16 @@ MODELL_DATEI = HIER / "config" / "eigene_modelle.yaml"
 # =============================================================================
 # 2. Was wird ausgewertet?
 # =============================================================================
-# True:  Messdateien neu auswerten, danach Plots erzeugen.
-# False: nur Plots aus vorhandenen Ergebnissen erzeugen (schnell).
-NEU_RECHNEN = True
+# Welche Messdateien (Auswertung_Masse_*.csv)?
+#   "dialog"  beim Start öffnet sich ein Auswahlfenster (mehrere Dateien mit Strg)
+#   "alle"    alle Dateien Auswertung_Masse_*.csv im ROHDATEN_ORDNER
+#   Liste     feste Dateien, z. B.
+#             [ROHDATEN_ORDNER / "Auswertung_Masse_PVC_R_1000um_72cm_20molCO2_600um.csv"]
+MESSDATEIEN = "dialog"
 
-# None = alle Dateien Auswertung_Masse_*.csv im Rohdatenordner.
-# Sonst Liste von Kanalnamen, z. B. ["PVC_Rund_1000um_72cm_20molCO2_600um"].
-# Kanalname = <Material>_<Rund|Eckig>_<D>um_<L>cm_<X>mol<Gas>_<Nadel>um
-KANAELE = None
+# True:  Messdateien auswerten, danach Plots erzeugen.
+# False: nur Plots aus vorhandenen Ergebnissen dieser Messdateien neu zeichnen (schnell).
+NEU_RECHNEN = True
 
 # =============================================================================
 # 3. Auswerte-Parameter
@@ -150,9 +155,10 @@ MONOLITH = dict(
 # 8. Druckkalibrierung (kalibrierung.py)
 # =============================================================================
 KALIBRIERUNG = dict(
-    # None = alle Auswertung_Druck_*.csv; sonst Liste von Kalibrier-Schlüsseln
-    # <Material>_<circular|rectangular>_<D>um_<Nadel>um
-    kanaele=None,
+    # Messdateien Auswertung_Druck_*.csv: "dialog", "alle" (im ROHDATEN_ORDNER) oder Liste
+    messdateien="dialog",
+    # Startordner des Auswahlfensters, z. B. Output_PressureCalibration der Videoauswertung
+    dialog_ordner=ROHDATEN_ORDNER,
     # Modell für Werte außerhalb der kalibrierten Betriebspunkte:
     # "Linear", "Power-Law", "Polynomial" oder "auto" (größtes R²)
     ersatzmodell="auto",

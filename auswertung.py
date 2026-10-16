@@ -4,8 +4,9 @@ Auswertung der Taylor-Flow-Messreihen.
 
     python auswertung.py
 
-Liest die Einstellungen aus config.py, wertet die Messdateien aus
-(Abschnitt 2 in config.py) und erzeugt die gewählten Plots (Abschnitt 4).
+Liest die Einstellungen aus config.py, fragt die Messdateien ab (Auswahlfenster
+oder feste Liste, Abschnitt 2 in config.py), wertet sie aus und erzeugt die
+gewählten Plots (Abschnitt 4).
 
 Ergebnisse:  <ERGEBNIS_ORDNER>/<Kanal>/<Kanal>_profile.csv
                                        <Kanal>_betriebspunkte.csv
@@ -26,26 +27,16 @@ matplotlib.use("Agg")
 import config  # noqa: E402
 from taylorflow import ergebnisse, protokoll  # noqa: E402
 from taylorflow import plots as pl  # noqa: E402
-from taylorflow.einlesen import finde_messreihen, lade_ausschluesse  # noqa: E402
+from taylorflow.einlesen import lade_ausschluesse, waehle_messreihen  # noqa: E402
 from taylorflow.literatur import LITERATURMODELLE  # noqa: E402
 from taylorflow.parameter import AuswerteParameter  # noqa: E402
 from taylorflow.pipeline import werte_kanal_aus  # noqa: E402
 
 
-def rechne(kanaele=None) -> list[str]:
+def rechne(reihen) -> list[str]:
     """Wertet die Messreihen aus und speichert die Ergebnisse. Gibt die Kanalnamen zurück."""
     p = AuswerteParameter.aus_dict(config.PARAMETER)
     ausschluesse = lade_ausschluesse(config.AUSSCHLUSS_DATEI)
-    reihen = finde_messreihen(config.ROHDATEN_ORDNER, "Masse")
-    if kanaele:
-        unbekannt = set(kanaele) - {r.kanal for r in reihen}
-        if unbekannt:
-            raise ValueError(f"Keine Messdatei für {sorted(unbekannt)} in {config.ROHDATEN_ORDNER}. "
-                             f"Vorhanden: {[r.kanal for r in reihen]}")
-        reihen = [r for r in reihen if r.kanal in kanaele]
-    if not reihen:
-        raise FileNotFoundError(f"Keine Dateien Auswertung_Masse_*.csv in {config.ROHDATEN_ORDNER}.")
-
     protokoll.starte(config.ERGEBNIS_ORDNER / "Modell_Gueltigkeitswarnungen.txt")
     for r in reihen:
         e = werte_kanal_aus(r, p, ausschluesse, config.KALIBRIER_DATENBANK)
@@ -103,12 +94,20 @@ def zeichne(kanaele: list[str]) -> None:
 def main() -> int:
     warnings.filterwarnings("ignore", category=RuntimeWarning)
     start = time.time()
+    reihen = waehle_messreihen(config.MESSDATEIEN, "Masse", config.ROHDATEN_ORDNER, config.DIALOG_ORDNER)
+    if not reihen:
+        print("Keine Messdatei ausgewählt, Auswertung beendet.")
+        return 1
+    print("Messdateien:")
+    for r in reihen:
+        print(f"  {r.datei}")
     if config.NEU_RECHNEN:
-        kanaele = rechne(config.KANAELE)
+        kanaele = rechne(reihen)
     else:
-        kanaele = config.KANAELE or ergebnisse.vorhandene_kanaele(config.ERGEBNIS_ORDNER)
-        if not kanaele:
-            print(f"Keine Ergebnisse in {config.ERGEBNIS_ORDNER}. NEU_RECHNEN = True setzen.")
+        kanaele = [r.kanal for r in reihen]
+        fehlend = sorted(set(kanaele) - set(ergebnisse.vorhandene_kanaele(config.ERGEBNIS_ORDNER)))
+        if fehlend:
+            print(f"Noch keine Ergebnisse für {fehlend} in {config.ERGEBNIS_ORDNER}. NEU_RECHNEN = True setzen.")
             return 1
     zeichne(kanaele)
     print(f"\nFertig nach {time.time() - start:.0f} s. Ergebnisse: {config.ERGEBNIS_ORDNER}")
