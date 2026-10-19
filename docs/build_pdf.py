@@ -55,7 +55,7 @@ CODE = re.compile(r'(```.*?```|`[^`\n]*`)', re.S)
 LINK = re.compile(r'(?<!!)\[([^\]]+)\]\((?!https?:)[^)]+\)')   # keine Bilder
 LISTE = re.compile(r'([^\n])\n([ \t]*(?:[-*]|\d+\.)[ \t]+)')
 KOMMENTAR = re.compile(r'<!--.*?-->', re.S)
-BILD = re.compile(r'(!\[[^\]]*\]\()(?:\.\./)?(bilder/[^)]+)\)')   # auch ../bilder aus docs/en
+BILD = re.compile(r'(!\[[^\]]*\]\()(bilder/[^)]+)\)')
 HANDNUMMER = re.compile(r'(?m)^(#{1,4})[ \t]+\d+(?:\.\d+)*[ \t]+')
 
 
@@ -100,13 +100,14 @@ def spaltenbreiten(text):
     return '\n'.join(zeilen)
 
 
-def bereinige(text):
+def bereinige(text, basis=DOCS):
     """Markdown so anpassen, dass Pandoc/XeLaTeX es sauber setzt.
 
     Nur außerhalb von Code: Links auf andere Kapitel auf ihren Text kürzen,
     Leerzeile vor Listen einfügen (sonst hängt Pandoc die Liste an den
     Absatz), HTML-Kommentare und handgeschriebene Kapitelnummern entfernen
     (LaTeX nummeriert selbst). Formeln stehen in $…$ und bleiben erhalten.
+    Bildpfade ``bilder/…`` beziehen sich auf ``basis`` (docs bzw. docs/en).
     """
     code = []
 
@@ -120,14 +121,14 @@ def bereinige(text):
     t = KOMMENTAR.sub('', t)
     t = HANDNUMMER.sub(r'\1 ', t)
     # XeLaTeX läuft in einem temporären Ordner: Bildpfade absolut machen
-    t = BILD.sub(lambda m: m.group(1) + (DOCS / m.group(2)).as_posix() + ')', t)
+    t = BILD.sub(lambda m: m.group(1) + (basis / m.group(2)).as_posix() + ')', t)
     t = re.sub('\x00(\\d+)\x00', lambda m: code[int(m.group(1))], t)
     return spaltenbreiten(t)
 
 
 def main(sprache='de'):
     s = SPRACHEN[sprache]
-    markdown = '\n\n'.join(bereinige((s['quelle'] / f'{name}.md').read_text(encoding='utf-8')) for name in KAPITEL)
+    markdown = '\n\n'.join(bereinige((s['quelle'] / f'{name}.md').read_text(encoding='utf-8'), s['quelle']) for name in KAPITEL)
     datum = datetime.date.today().strftime(s['datum'])
     kopf = DOCS / '_kopf.tex'
     kopf.write_text(KOPF, encoding='utf-8')

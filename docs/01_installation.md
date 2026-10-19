@@ -44,12 +44,12 @@ environment variables* anhaken.
 
 Das Programm liegt auf GitHub:
 <https://github.com/Oxymoron9946/TaylorFlow_Auswertung> (Branch `main`).
-Das Repository ist privat. Zum Herunterladen ist ein GitHub-Konto nötig,
-das vom Eigentümer eingeladen wurde (Einladung per E-Mail annehmen).
+Das Repository ist öffentlich; zum Herunterladen ist kein GitHub-Konto
+nötig.
 
 **Variante A: als ZIP, ohne weitere Software**
 
-1. Die Seite im Browser öffnen und mit dem GitHub-Konto anmelden.
+1. Die Seite im Browser öffnen.
 2. Oben rechts auf **Code** → **Download ZIP** klicken.
 3. Das ZIP entpacken, z. B. nach `C:\Messungen\TaylorFlow_Auswertung`.
    Dieser Ordner ist im Folgenden der **Projektordner**; er enthält u. a.
@@ -62,8 +62,7 @@ ersetzen. Eigene Änderungen an `config.py`, `config/ausschluesse.yaml` und
 **Variante B: mit Git (bequem für spätere Aktualisierungen)**
 
 1. *Git for Windows* von <https://git-scm.com/download/win> installieren
-   (Standardeinstellungen genügen). Beim ersten Zugriff auf GitHub öffnet
-   sich ein Anmeldefenster.
+   (Standardeinstellungen genügen).
 2. Die Eingabeaufforderung öffnen, in den gewünschten Elternordner wechseln
    und das Repository holen:
 
