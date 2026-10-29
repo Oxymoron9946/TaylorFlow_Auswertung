@@ -5,7 +5,7 @@ Aufruf (aus dem Projektordner):
     python docs/build_pdf.py        deutsch:  docs/*.md    -> docs/Handbuch_TaylorFlow.pdf
     python docs/build_pdf.py en     englisch: docs/en/*.md -> docs/Handbuch_TaylorFlow_en.pdf
 
-Voraussetzungen: pypandoc_binary (pip install pypandoc_binary) und XeLaTeX
+Voraussetzungen: pypandoc_binary (docs/requirements.txt) und XeLaTeX
 (TeX Live oder MiKTeX).
 """
 
