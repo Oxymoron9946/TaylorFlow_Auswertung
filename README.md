@@ -70,6 +70,9 @@ Ausführliche Anleitung: **Handbuch** `docs/Handbuch_TaylorFlow.pdf`
 11. [Monolith](docs/11_monolith.md)
 12. [Programmaufbau und Erweiterung](docs/12_erweitern.md)
 
+Die PDFs werden bei jeder Änderung in `docs/` automatisch neu gebaut.
+Handbuch ändern: [docs/HANDBUCH_BEARBEITEN.md](docs/HANDBUCH_BEARBEITEN.md).
+
 ## Ordner
 
 ```
